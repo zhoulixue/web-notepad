@@ -1,5 +1,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 
 module.exports = {
   entry: './src/index.js',
@@ -9,13 +11,16 @@ module.exports = {
     clean: true,
     assetModuleFilename: 'images/[contenthash][ext]', // 资源文件名
   },
-  mode: 'development',
+  mode: 'production',
   devtool: 'source-map',
   plugins: [
     new HtmlWebpackPlugin({
       template: './index.html',
       filename: 'app.html',
       inject: 'body',
+    }),
+    new MiniCssExtractPlugin({
+      filename: 'styles/[contenthash].css'
     }),
   ],
   devServer: {
@@ -53,6 +58,20 @@ module.exports = {
           },
         },
       },
+      // {
+      //   test: /\.(css|scss)$/,
+      //   use: ['style-loader', 'css-loader', 'sass-loader'],
+      // },
+      {
+        test: /\.(css|scss)$/,
+        use: [MiniCssExtractPlugin.loader, 'css-loader', 'sass-loader'],
+      },
+    ],
+  },
+
+  optimization: {
+    minimizer: [
+      new CssMinimizerPlugin(),
     ],
   },
 };

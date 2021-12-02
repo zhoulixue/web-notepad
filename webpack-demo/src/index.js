@@ -2,6 +2,7 @@ import helloWorld from './hello-world';
 import mageSrc from './assets/image.png';
 import logoSrc from './assets/icon.svg';
 import textDemo from './assets/demo.txt';
+import './style.scss';
 
 const img = document.createElement('img');
 img.src = mageSrc;
