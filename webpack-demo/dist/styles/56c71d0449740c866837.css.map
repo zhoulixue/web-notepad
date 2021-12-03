@@ -1,1 +1,0 @@
-{"version":3,"file":"styles/56c71d0449740c866837.css","mappings":"AACA,KACE,SAFM","sources":["webpack:///./src/style.scss"],"sourcesContent":["$color: red;\nbody {\n  color: $color;\n}\n"],"names":[],"sourceRoot":""}

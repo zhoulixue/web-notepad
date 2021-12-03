@@ -1,10 +1,24 @@
 /******/ (() => { // webpackBootstrap
-/******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
+
+/***/ 204:
+/***/ ((module) => {
+
+module.exports = [["to","from","heading","body",""],["MM","JJ","Reminder","Call me on Tuseday",""],["","","","",""],["","","","",""],["","","","",""],["","","","",""],["","","","",""],["","","","",""],["","","","",""],["","","","",""],["","","","",""]]
+
+/***/ }),
+
+/***/ 898:
+/***/ ((module) => {
+
+module.exports = {"note":{"to":["MM"],"from":["JJ"],"heading":["Reminder"],"body":["Call me on Tuseday"]}}
+
+/***/ }),
 
 /***/ 231:
 /***/ ((module) => {
 
+"use strict";
 module.exports = "data:image/svg+xml;base64,PHN2ZyB0PSIxNjA3OTU0ODMwMDE4IiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjExNDciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZD0iTTY0Mi4xNzQgNTA0LjU5NGM3Ljk5IDcuMjQxIDcuODk3IDE3LjU4LTAuMzM0IDI0Ljc4MkwzMzIuNjIgNzk5Ljk0NWMtOC44NjcgNy43NTktOS43NjYgMjEuMjM2LTIuMDA3IDMwLjEwMyA3Ljc1OCA4Ljg2NyAyMS4yMzYgOS43NjYgMzAuMTAzIDIuMDA3bDMwOS4yMjEtMjcwLjU2OWMyNy40MjktMjQgMjcuNzkyLTY0LjEyNyAwLjg5LTg4LjUwN0wzNjAuOTkyIDE5Mi4xOTJjLTguNzMtNy45MTItMjIuMjIxLTcuMjQ4LTMwLjEzMyAxLjQ4Mi03LjkxMiA4LjczLTcuMjQ4IDIyLjIyMiAxLjQ4MiAzMC4xMzRsMzA5LjgzMyAyODAuNzg2eiIgcC1pZD0iMTE0OCIgZmlsbD0iI0ZGNjUxMyI+PC9wYXRoPjwvc3ZnPg==";
 
 /***/ }),
@@ -12,6 +26,7 @@ module.exports = "data:image/svg+xml;base64,PHN2ZyB0PSIxNjA3OTU0ODMwMDE4IiBjbGFz
 /***/ 253:
 /***/ ((module) => {
 
+"use strict";
 module.exports = "hello webpack";
 
 /***/ }),
@@ -19,6 +34,7 @@ module.exports = "hello webpack";
 /***/ 544:
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
+"use strict";
 module.exports = __webpack_require__.p + "images/44c02cb195c369bd6c03.png";
 
 /***/ })
@@ -50,6 +66,30 @@ module.exports = __webpack_require__.p + "images/44c02cb195c369bd6c03.png";
 /******/ 	}
 /******/ 	
 /************************************************************************/
+/******/ 	/* webpack/runtime/compat get default export */
+/******/ 	(() => {
+/******/ 		// getDefaultExport function for compatibility with non-harmony modules
+/******/ 		__webpack_require__.n = (module) => {
+/******/ 			var getter = module && module.__esModule ?
+/******/ 				() => (module['default']) :
+/******/ 				() => (module);
+/******/ 			__webpack_require__.d(getter, { a: getter });
+/******/ 			return getter;
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__webpack_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
 /******/ 	/* webpack/runtime/global */
 /******/ 	(() => {
 /******/ 		__webpack_require__.g = (function() {
@@ -60,6 +100,11 @@ module.exports = __webpack_require__.p + "images/44c02cb195c369bd6c03.png";
 /******/ 				if (typeof window === 'object') return window;
 /******/ 			}
 /******/ 		})();
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/publicPath */
@@ -84,8 +129,9 @@ module.exports = __webpack_require__.p + "images/44c02cb195c369bd6c03.png";
 /******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
-// This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
+// This entry need to be wrapped in an IIFE because it need to be in strict mode.
 (() => {
+"use strict";
 
 ;// CONCATENATED MODULE: ./src/hello-world.js
 function helloWorld () {
@@ -99,12 +145,22 @@ var assets_image = __webpack_require__(544);
 var icon = __webpack_require__(231);
 // EXTERNAL MODULE: ./src/assets/demo.txt
 var demo = __webpack_require__(253);
+// EXTERNAL MODULE: ./src/assets/data.csv
+var data = __webpack_require__(204);
+var data_default = /*#__PURE__*/__webpack_require__.n(data);
+// EXTERNAL MODULE: ./src/assets/data.xml
+var assets_data = __webpack_require__(898);
+var assets_data_default = /*#__PURE__*/__webpack_require__.n(assets_data);
 ;// CONCATENATED MODULE: ./src/index.js
 
 
 
 
 
+
+
+
+hello_world();
 
 const img = document.createElement('img');
 img.src = assets_image;
@@ -115,11 +171,17 @@ img2.src = icon;
 document.body.appendChild(img2);
 
 const txt = document.createElement('div');
+txt.classList.add('block-bg');
 txt.innerHTML = demo;
 document.body.appendChild(txt);
 
-hello_world();
+const src_icon = document.createElement('span');
+src_icon.innerText = 'TencentSans-W7';
+src_icon.classList.add('icon');
+document.body.appendChild(src_icon);
 
+console.log((data_default()));
+console.log((assets_data_default()));
 })();
 
 /******/ })()

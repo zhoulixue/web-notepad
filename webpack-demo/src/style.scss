@@ -2,3 +2,18 @@ $color: red;
 body {
   color: $color;
 }
+.block-bg {
+  background-image: url('./assets/image.png');
+  width: 200px;
+  height: 200px;
+}
+
+@font-face {
+  font-family: 'TencentSans-W7';
+  src: url('./assets//TencentSans-W7.ttf') format('truetype');
+}
+
+.icon {
+  font-family: TencentSans-W7;
+  font-size: 14px;
+}
