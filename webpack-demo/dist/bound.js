@@ -134,11 +134,47 @@ var __webpack_exports__ = {};
 "use strict";
 
 ;// CONCATENATED MODULE: ./src/hello-world.js
-function helloWorld () {
-  console.log('hello world!!')
-}
-/* harmony default export */ const hello_world = (helloWorld);
+function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
 
+function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
+
+function getString() {
+  return new Promise(function (resolve) {
+    setTimeout(function () {
+      resolve('hello world!!');
+    }, 1000);
+  });
+}
+
+function helloWorld() {
+  return _helloWorld.apply(this, arguments);
+}
+
+function _helloWorld() {
+  _helloWorld = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
+    var str;
+    return regeneratorRuntime.wrap(function _callee$(_context) {
+      while (1) {
+        switch (_context.prev = _context.next) {
+          case 0:
+            _context.next = 2;
+            return getString();
+
+          case 2:
+            str = _context.sent;
+            console.log(str);
+
+          case 4:
+          case "end":
+            return _context.stop();
+        }
+      }
+    }, _callee);
+  }));
+  return _helloWorld.apply(this, arguments);
+}
+
+/* harmony default export */ const hello_world = (helloWorld);
 // EXTERNAL MODULE: ./src/assets/image.png
 var assets_image = __webpack_require__(544);
 // EXTERNAL MODULE: ./src/assets/icon.svg
@@ -159,27 +195,21 @@ var assets_data_default = /*#__PURE__*/__webpack_require__.n(assets_data);
 
 
 
-
 hello_world();
-
-const img = document.createElement('img');
+var img = document.createElement('img');
 img.src = assets_image;
 document.body.appendChild(img);
-
-const img2 = document.createElement('img');
+var img2 = document.createElement('img');
 img2.src = icon;
 document.body.appendChild(img2);
-
-const txt = document.createElement('div');
+var txt = document.createElement('div');
 txt.classList.add('block-bg');
 txt.innerHTML = demo;
 document.body.appendChild(txt);
-
-const src_icon = document.createElement('span');
+var src_icon = document.createElement('span');
 src_icon.innerText = 'TencentSans-W7';
 src_icon.classList.add('icon');
 document.body.appendChild(src_icon);
-
 console.log((data_default()));
 console.log((assets_data_default()));
 })();
