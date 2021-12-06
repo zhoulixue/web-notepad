@@ -7,9 +7,25 @@ const yaml = require('yaml');
 const json5 = require('json5');
 
 module.exports = {
-  entry: './src/index.js',
+  // entry: './src/index.js',
+  entry: {
+    index: './src/index.js',
+    another: './src/another-module.js',
+  },
+  // entry: {
+  //   index: {
+  //     import: './src/index.js',
+  //     dependOn: 'shared',
+  //   },
+  //   another: {
+  //     import: './src/another-module.js',
+  //     dependOn: 'shared',
+  //   },
+  //   shared: 'lodash',
+  // },
+
   output: {
-    filename: 'bound.js',
+    filename: '[name].[contenthash].js',
     path: path.resolve(__dirname, './dist'),
     clean: true,
     assetModuleFilename: 'images/[contenthash][ext]', // 资源文件名
@@ -124,5 +140,8 @@ module.exports = {
     minimizer: [
       new CssMinimizerPlugin(),
     ],
+    splitChunks: {
+      chunks: 'all',
+    },
   },
 };
