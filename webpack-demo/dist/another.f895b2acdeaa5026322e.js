@@ -7,8 +7,12 @@
 
 /* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(784);
 /* harmony import */ var lodash__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(lodash__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var dayjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(693);
+/* harmony import */ var dayjs__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(dayjs__WEBPACK_IMPORTED_MODULE_1__);
+
 
 console.log(lodash__WEBPACK_IMPORTED_MODULE_0___default().join(['Another', 'modules'], ' '));
+console.debug('another module', dayjs__WEBPACK_IMPORTED_MODULE_1___default()().format('YYYY-MM-DD'));
 
 /***/ })
 
@@ -185,9 +189,9 @@ console.log(lodash__WEBPACK_IMPORTED_MODULE_0___default().join(['Another', 'modu
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
 /******/ 	// This entry module depends on other loaded chunks and execution need to be delayed
-/******/ 	var __webpack_exports__ = __webpack_require__.O(undefined, [784], () => (__webpack_require__(516)))
+/******/ 	var __webpack_exports__ = __webpack_require__.O(undefined, [38], () => (__webpack_require__(516)))
 /******/ 	__webpack_exports__ = __webpack_require__.O(__webpack_exports__);
 /******/ 	
 /******/ })()
 ;
-//# sourceMappingURL=another.24f913c2e00dedbab508.js.map
+//# sourceMappingURL=another.f895b2acdeaa5026322e.js.map

@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import dayjs from 'dayjs';
 import helloWorld from './hello-world';
 import mageSrc from './assets/image.png';
 import logoSrc from './assets/icon.svg';
@@ -42,3 +43,5 @@ btn.onclick = () => {
   });
 };
 document.body.appendChild(btn);
+
+console.debug('index dayjs', dayjs().format('YYYY-MM-DD'));

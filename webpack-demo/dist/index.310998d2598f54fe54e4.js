@@ -35,6 +35,9 @@ getComponent().then(function (ele) {
 // EXTERNAL MODULE: ../node_modules/lodash/lodash.js
 var lodash = __webpack_require__(784);
 var lodash_default = /*#__PURE__*/__webpack_require__.n(lodash);
+// EXTERNAL MODULE: ../node_modules/dayjs/dayjs.min.js
+var dayjs_min = __webpack_require__(693);
+var dayjs_min_default = /*#__PURE__*/__webpack_require__.n(dayjs_min);
 ;// CONCATENATED MODULE: ../node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
   try {
@@ -139,6 +142,7 @@ var async_module = __webpack_require__(190);
 
 
 
+
 hello_world();
 var img = document.createElement('img');
 img.src = assets_image;
@@ -161,6 +165,7 @@ var btn = document.createElement('button');
 btn.innerText = '点击执行加法';
 
 btn.onclick = function () {
+  // webpackPrefetch webpackPreload
   __webpack_require__.e(/* import() | math */ 600).then(__webpack_require__.bind(__webpack_require__, 454)).then(function (_ref) {
     var add = _ref.add;
     console.log(add(4, 5));
@@ -168,6 +173,7 @@ btn.onclick = function () {
 };
 
 document.body.appendChild(btn);
+console.debug('index dayjs', dayjs_min_default()().format('YYYY-MM-DD'));
 
 /***/ }),
 
@@ -1035,16 +1041,6 @@ module.exports = __webpack_require__.p + "images/44c02cb195c369bd6c03.png";
 /******/ 		};
 /******/ 	})();
 /******/ 	
-/******/ 	/* webpack/runtime/chunk prefetch function */
-/******/ 	(() => {
-/******/ 		__webpack_require__.F = {};
-/******/ 		__webpack_require__.E = (chunkId) => {
-/******/ 			Object.keys(__webpack_require__.F).map((key) => {
-/******/ 				__webpack_require__.F[key](chunkId);
-/******/ 			});
-/******/ 		}
-/******/ 	})();
-/******/ 	
 /******/ 	/* webpack/runtime/compat get default export */
 /******/ 	(() => {
 /******/ 		// getDefaultExport function for compatibility with non-harmony modules
@@ -1283,20 +1279,7 @@ module.exports = __webpack_require__.p + "images/44c02cb195c369bd6c03.png";
 /******/ 				}
 /******/ 		};
 /******/ 		
-/******/ 		__webpack_require__.F.j = (chunkId) => {
-/******/ 			if((!__webpack_require__.o(installedChunks, chunkId) || installedChunks[chunkId] === undefined) && true) {
-/******/ 				installedChunks[chunkId] = null;
-/******/ 				var link = document.createElement('link');
-/******/ 		
-/******/ 				if (__webpack_require__.nc) {
-/******/ 					link.setAttribute("nonce", __webpack_require__.nc);
-/******/ 				}
-/******/ 				link.rel = "prefetch";
-/******/ 				link.as = "script";
-/******/ 				link.href = __webpack_require__.p + __webpack_require__.u(chunkId);
-/******/ 				document.head.appendChild(link);
-/******/ 			}
-/******/ 		};
+/******/ 		// no prefetching
 /******/ 		
 /******/ 		// no preloaded
 /******/ 		
@@ -1336,21 +1319,14 @@ module.exports = __webpack_require__.p + "images/44c02cb195c369bd6c03.png";
 /******/ 		chunkLoadingGlobal.push = webpackJsonpCallback.bind(null, chunkLoadingGlobal.push.bind(chunkLoadingGlobal));
 /******/ 	})();
 /******/ 	
-/******/ 	/* webpack/runtime/startup prefetch */
-/******/ 	(() => {
-/******/ 		__webpack_require__.O(0, [826], () => {
-/******/ 			__webpack_require__.E(600);
-/******/ 		}, 5);
-/******/ 	})();
-/******/ 	
 /************************************************************************/
 /******/ 	
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
 /******/ 	// This entry module depends on other loaded chunks and execution need to be delayed
-/******/ 	var __webpack_exports__ = __webpack_require__.O(undefined, [784], () => (__webpack_require__(257)))
+/******/ 	var __webpack_exports__ = __webpack_require__.O(undefined, [38], () => (__webpack_require__(257)))
 /******/ 	__webpack_exports__ = __webpack_require__.O(__webpack_exports__);
 /******/ 	
 /******/ })()
 ;
-//# sourceMappingURL=index.398dc554b44e50efcd16.js.map
+//# sourceMappingURL=index.310998d2598f54fe54e4.js.map

@@ -39,6 +39,7 @@
     "yaml": "^1.10.2"
   },
   "dependencies": {
+    "dayjs": "^1.10.7",
     "lodash": "^4.17.21"
   }
 }
