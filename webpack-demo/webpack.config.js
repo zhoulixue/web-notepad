@@ -25,7 +25,7 @@ module.exports = {
   // },
 
   output: {
-    filename: '[name].[contenthash].js',
+    filename: 'scripts/[name].[contenthash].js',
     path: path.resolve(__dirname, './dist'),
     clean: true,
     assetModuleFilename: 'images/[contenthash][ext]', // 资源文件名
@@ -141,7 +141,14 @@ module.exports = {
       new CssMinimizerPlugin(),
     ],
     splitChunks: {
-      chunks: 'all',
+      // chunks: 'all',
+      cacheGroups: {
+        vendor: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendors',
+          chunks: 'all',
+        },
+      },
     },
   },
 };
