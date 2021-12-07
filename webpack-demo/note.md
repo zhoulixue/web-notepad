@@ -2,6 +2,8 @@
 > npx webpack    
 > npx webpack --watch     
 > npx webpack-dev-server    
+> npx webpack --env production    
+
 
 ## 笔记
 
