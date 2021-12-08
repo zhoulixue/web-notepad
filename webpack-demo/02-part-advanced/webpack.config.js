@@ -27,6 +27,8 @@ module.exports = {
     },
     historyApiFallback: true, // 跳转任意路由
     host: '0.0.0.0',
+    hot: true, // HMR hot module replace
+    liveReload: true, // 自动编译和刷新浏览器
   },
   output: {
     clean: true,
@@ -36,4 +38,12 @@ module.exports = {
       template: './index.html',
     }),
   ],
+  module: {
+    rules: [
+      {
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader']
+      }
+    ]
+  }
 };
