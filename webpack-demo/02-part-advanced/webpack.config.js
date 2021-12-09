@@ -38,9 +38,7 @@ module.exports = {
     clean: true,
   },
   plugins: [
-    new HtmlWebpackPlugin({
-      template: './index.html',
-    }),
+    new HtmlWebpackPlugin(),
   ],
   module: {
     rules: [
@@ -55,5 +53,12 @@ module.exports = {
       '@': path.resolve(__dirname, './src'),
     },
     extensions: ['.json', '.js', '.vue'],
+  },
+  externalsType: 'script',
+  externals: {
+    jquery: [
+      'https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.js',
+      'jQuery',
+    ],
   },
 };

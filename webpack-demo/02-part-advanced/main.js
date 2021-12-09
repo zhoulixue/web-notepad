@@ -1,5 +1,8 @@
 import './style.css';
-import './input';
+// import './input';
+import $ from 'jquery';
+
+console.log($);
 
 const button = document.createElement('button')
 button.textContent = '添加'
@@ -10,6 +13,6 @@ button.addEventListener('click', () => {
 })
 document.body.appendChild(button)
 
-if (module.hot) {
-  module.hot.accept('./input.js', () => {})
-}
+// if (module.hot) {
+//   module.hot.accept('./input.js', () => {})
+// }
