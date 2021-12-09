@@ -1,4 +1,5 @@
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const path = require('path');
 
 module.exports = {
   mode: 'development',
@@ -29,6 +30,9 @@ module.exports = {
     host: '0.0.0.0',
     hot: true, // HMR hot module replace
     liveReload: true, // 自动编译和刷新浏览器
+    client: {
+      overlay: false, // 出现错误或告警时，在浏览器中显示全屏覆盖
+    },
   },
   output: {
     clean: true,
@@ -42,8 +46,14 @@ module.exports = {
     rules: [
       {
         test: /\.css$/,
-        use: ['style-loader', 'css-loader']
-      }
-    ]
-  }
+        use: ['style-loader', 'css-loader'],
+      },
+    ],
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+    extensions: ['.json', '.js', '.vue'],
+  },
 };
