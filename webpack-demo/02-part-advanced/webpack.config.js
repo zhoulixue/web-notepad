@@ -1,5 +1,5 @@
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+// const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 const path = require('path');
 
 module.exports = {
@@ -22,8 +22,8 @@ module.exports = {
     headers: {
       'X-access-token': '123',
     },
-    https: true,
-    http2: true,
+    // https: true,
+    // http2: true,
     proxy: {
       '/api': 'http://localhost:9000',
     },
@@ -40,13 +40,22 @@ module.exports = {
   },
   plugins: [
     new HtmlWebpackPlugin(),
-    new BundleAnalyzerPlugin(),
+    // new BundleAnalyzerPlugin(),
   ],
   module: {
     rules: [
       {
         test: /\.css$/,
-        use: ['style-loader', 'css-loader'],
+        use: [
+          'style-loader',
+          {
+            loader: 'css-loader',
+            options: {
+              modules: true,
+            }
+          },
+          'postcss-loader'
+        ],
       },
     ],
   },

@@ -1,8 +1,10 @@
-import './style.css';
+import style from './style.css';
 // import './input';
 import $ from 'jquery';
 
 console.log($);
+
+console.log(style);
 
 const button = document.createElement('button')
 button.textContent = '添加'
