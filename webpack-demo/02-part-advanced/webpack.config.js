@@ -4,7 +4,22 @@ const path = require('path');
 
 module.exports = {
   mode: 'development',
-  entry: './main.js',
+  entry: {
+    main: {
+      import: ['./src/app.js'],
+      dependOn: 'lodash',
+      filename: 'channel1/[name].js'
+    },
+    main2: {
+      import: ['./src/app2.js'],
+      dependOn: 'lodash',
+      filename: 'channel2/[name].js'
+    },
+    lodash: {
+      import: 'lodash',
+      filename: 'common/[name].js'
+    }
+  },
   // devtool: 'eval', // 默认值
   // devtool: 'source-map',
   // devtool: 'hidden-source-map', // 会生成map但是不会关联
@@ -39,7 +54,22 @@ module.exports = {
     clean: true,
   },
   plugins: [
-    new HtmlWebpackPlugin(),
+    new HtmlWebpackPlugin({
+      template: './index.html',
+      title: 'main1',
+      inject: 'body',
+      chunks: ['main', 'lodash'],
+      filename: 'channel1/index.html',
+      publicPath: 'http://www.a.com'
+    }),
+    new HtmlWebpackPlugin({
+      template: './index.html',
+      title: 'main2',
+      inject: 'body',
+      chunks: ['main2', 'lodash'],
+      filename: 'channel2/index.html',
+      publicPath: 'http://www.b.com'
+    }),
     // new BundleAnalyzerPlugin(),
   ],
   module: {
