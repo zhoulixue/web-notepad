@@ -1,1 +1,0 @@
-{"version":3,"file":"channel2/main2.js","mappings":";;;;;;;;;;;;AAAA;AACA","sources":["webpack://webpack-demo/./src/app2.js"],"sourcesContent":["import _ from 'lodash'\nconsole.log('app2', _)"],"names":[],"sourceRoot":""}

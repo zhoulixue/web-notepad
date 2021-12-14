@@ -43,5 +43,6 @@
   "browerslist": [
     "> 1%",
     "last 2 versions"
-  ]
+  ],
+  "sideEffects": ["*.css"]
 }
