@@ -10,6 +10,9 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@babel/polyfill": "^7.12.1",
+    "@babel/preset-env": "^7.16.5",
+    "core-js": "^3.20.0",
     "exports-loader": "^3.1.0",
     "html-webpack-plugin": "^5.5.0",
     "http-server": "^14.0.0",

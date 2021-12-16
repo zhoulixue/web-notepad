@@ -1,5 +1,5 @@
-console.log(_)
-console.log('webpack pwd22')
+// console.log(_)
+// console.log('webpack pwd22')
 
 // if ('serviceWorker' in navigator) {
 //   window.addEventListener('load', () => {
@@ -13,4 +13,6 @@ console.log('webpack pwd22')
 //   })
 // }
 
-this.alert(11);
+// this.alert(11);
+
+console.log(Array.from([1, 2, 3], x => x ** 2))

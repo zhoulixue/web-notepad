@@ -3,8 +3,11 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const webpack = require('webpack');
 
 module.exports = {
-  mode: 'development',
+  mode: 'production',
   entry: './src/index.js',
+  output: {
+    clean: true,
+  },
   plugins: [
     new HtmlWebpackPlugin(),
     // new WorkboxPlugin.GenerateSW({
@@ -22,13 +25,32 @@ module.exports = {
   },
   module: {
     rules: [
+      // {
+      //   test: require.resolve('./src/index.js'),
+      //   use: 'imports-loader?wrapper=window'
+      // },
+      // {
+      //   test: require.resolve('./src/global.js'),
+      //   use: 'exports-loader?type=commonjs&exports=file'
+      // },
       {
-        test: require.resolve('./src/index.js'),
-        use: 'imports-loader?wrapper=window'
-      },
-      {
-        test: require.resolve('./src/global.js'),
-        use: 'exports-loader?type=commonjs&exports=file'
+        test: /\.js$/,
+        loader: 'babel-loader',
+        options: {
+          presets: [
+            [
+              '@babel/preset-env',
+              {
+                targets: [
+                  'last 1 version',
+                  '> 1%'
+                ],
+                useBuiltIns: 'usage',
+                corejs: 3
+              }
+            ]
+          ]
+        }
       }
     ]
   }
