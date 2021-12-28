@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>字体相关</title>
+  <style>
+    .bottom-align,.bottom-align2,.bottom-align3,.bottom-align4 {
+      border: 1px solid black;
+    }
+    .bottom-align {
+      display: flex;
+      align-items: baseline;
+      height: 48px;
+      line-height: 48px;
+    }
+    .bottom-align2 {
+      height: 48px;
+      line-height: 48px;
+    }
+    .bottom-align2 > div {
+      display: inline-block;
+    }
+    .bottom-align3 {
+      display: table-cell;
+      vertical-align: bottom;
+      height: 70px;
+    }
+    .bottom-align4 {
+      height: 200px;
+      display: flex;
+      align-items: flex-end;
+    }
+  </style>
+</head>
+<body>
+  <div>字体底部对齐</div>
+  <div class="bottom-align">
+    <div style="font-size: 12px;">1234</div>
+    <div style="font-size: 24px;">5678</div>
+    <div style="font-size: 36px;">90</div>
+    <div style="font-size: 48px;">1234</div>
+  </div>
+  <div class="bottom-align2">
+    <div style="font-size: 12px;">1234</div>
+    <div style="font-size: 24px;">5678</div>
+    <div style="font-size: 36px;">90</div>
+    <div style="font-size: 48px;">1234</div>
+  </div>
+  <div class="bottom-align3">
+    1234567890
+  </div>
+  <div class="bottom-align4">
+    <div class="bottom-align">
+      <div style="font-size: 12px;">1234</div>
+      <div style="font-size: 24px;">5678</div>
+      <div style="font-size: 36px;">90</div>
+      <div style="font-size: 48px;">1234</div>
+    </div>
+  </div>
+</body>
+
+</html>
