@@ -1,0 +1,178 @@
+[
+  {
+    "key": "userinfo",
+    "value": "64363521:131073"
+  },
+  {
+    "key": "commentlist",
+    "value": "899265:65536@"
+  },
+  {
+    "key": "orderlist",
+    "value": "192000065:84249@"
+  },
+  {
+    "key": "productInfo",
+    "value": "897473:262144@"
+  },
+  {
+    "key": "vcount",
+    "value": "640705:131072"
+  },
+  {
+    "key": "proIdQuery",
+    "value": "897473:196608"
+  },
+  {
+    "key": "orderStatus",
+    "value": "192000065:86616"
+  },
+  {
+    "key": "order",
+    "value": "897537:65536"
+  },
+  {
+    "key": "order_seckill",
+    "value": "64526913:65536"
+  },
+  {
+    "key": "balanceNew",
+    "value": "192001985:72675"
+  },
+  {
+    "key": "payNew",
+    "value": "192001985:68704"
+  },
+  {
+    "key": "pay",
+    "value": "897537:131072"
+  },
+  {
+    "key": "pubComment",
+    "value": "899265:131072@"
+  },
+  {
+    "key": "ipDetail",
+    "value": "897473:393216"
+  },
+  {
+    "key": "home",
+    "value": "897473:458752"
+  },
+  {
+    "key": "home_cache",
+    "value": "719745:65537@"
+  },
+  {
+    "key": "trolley",
+    "value": "913345:65537"
+  },
+  {
+    "key": "seller",
+    "value": "897473:65536"
+  },
+  {
+    "key": "wxauth",
+    "value": "64028801:65536"
+  },
+  {
+    "key": "addrList",
+    "value": "897473:524288"
+  },
+  {
+    "key": "expressinfo",
+    "value": "948161:65536"
+  },
+  {
+    "key": "vcoinGift",
+    "value": "948161:131072"
+  },
+  {
+    "key": "activityInfo",
+    "value": "192000065:83063"
+  },
+  {
+    "key": "vbiTask",
+    "value": "546625:327680"
+  },
+  {
+    "key": "sign",
+    "value": "610497:65536"
+  },
+  {
+    "key": "ticket",
+    "value": "192000065:79321"
+  },
+  {
+    "key": "idol101",
+    "value": "891841:65536"
+  },
+  {
+    "key": "refundPrice",
+    "value": "897537:196608"
+  },
+  {
+    "key": "videotoken",
+    "value": "246465:327680@"
+  },
+  {
+    "key": "vsession",
+    "value": "453185:131072@"
+  },
+  {
+    "key": "ticket_share",
+    "value": "896129:393216"
+  },
+  {
+    "key": "face_gift_act",
+    "value": "896129:393216"
+  },
+  {
+    "key": "postage",
+    "value": "1034241:65536@"
+  },
+  {
+    "key": "search",
+    "value": "192000065:69658"
+  },
+  {
+    "key": "search_old",
+    "value": "989953:327680"
+  },
+  {
+    "key": "quenue",
+    "value": "64526849:65536"
+  },
+  {
+    "key": "nameplate",
+    "value": "897473:983040"
+  },
+  {
+    "key": "rank",
+    "value": "913345:851968@"
+  },
+  {
+    "key": "pool",
+    "value": "897473:917504"
+  },
+  {
+    "key": "credit",
+    "value": "896129:524288"
+  },
+  {
+    "key": "bindAccount",
+    "value": "679553:65536"
+  },
+  {
+    "key": "defail",
+    "value": "1417665:65536"
+  },
+  {
+    "key": "realnameCert",
+    "value": "65030465:65537"
+  },
+  {
+    "key": "freqCrl",
+    "value": "913345:262144"
+  }
+]
