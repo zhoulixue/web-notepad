@@ -10,7 +10,7 @@ test('mock函数', () => {
   forEach([0, 1], mockCallback);
 
   // 此 mock 函数被调用了两次
-  expect(mockCallback.mock.calls.length).toBe(2);
+  expect(mockCallback.s.calls.length).toBe(2);
 
   // 第一次调用函数时的第一个参数是 0
   expect(mockCallback.mock.calls[0][0]).toBe(0);
