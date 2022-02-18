@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <h3>一些提示信息</h3>
+  <ul>
+    <li>浏览器是否支持: <span id="isSupport"></span></li>
+    <li>service worker是否注册成功： <span id="isSuccess"></span></li>
+    <li>当前注册状态：<span id="state"></span></li>
+    <li>当前service worker状态： <span id="swState"></span></li>
+  </ul>
+
+  <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      $('#isSupport').text('支持')
+
+      // 开始注册service worker
+      navigator.serviceWorker.register('./sw-test/sw.js', {
+        scope: './sw-test/'
+      }).then(registration => {
+        $('#isSuccess').text('注册成功')
+
+        let serviceWorker
+        if (registration.installing) {
+          serviceWorker = registration.installing
+          $('#state').text('installing')
+        } else if (registration.waiting) {
+          serviceWorker = registration.waiting
+          $('#state').text('waiting')
+        } else if (registration.active) {
+          serviceWorker = registration.active
+          $('#state').text('active')
+        }
+
+        if (serviceWorker) {
+          $('#swState').text(serviceWorker.state)
+          serviceWorker.addEventListener('statechange', e => {
+            $('#swState').append(`&emsp;状态变化为${e.target.state}`)
+          })
+        }
+      }).catch(error => {
+        $('#isSuccess').text('注册失败')
+      })
+    }
+  </script>
+</body>
+</html>
