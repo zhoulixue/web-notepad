@@ -1,0 +1,175 @@
+#include "VideoMallComm.jce"
+
+
+// 测试CL5 913345:786432
+module VMallPool
+{
+    enum emVMallPoolCmd 
+    { 
+        E_GET_POOL_LIST_CMD = 0xfa13,        //商品池列表（B端）
+        E_ADD_EDIT_POOL_CMD = 0xfa14,        //添加修改商品池（B端）
+        E_OPERATE_POOL_CMD = 0xfa15,         //操作商品池（删除、上线）（B端）   
+        E_GET_POOL_INFO_CMD = 0xfa16,        //商品池详情  （B端）
+        E_GET_POOL_SCOPE_INFO_CMD = 0xfa2c,  //商品池范围信息拉取（活动模块，搜索模块）
+        E_POOL_NOTIFY_CMD = 0xfa2d,          //商品池更新中转
+        E_SHELVES_POOL_LINK_CMD	= 0xfa37     //商品池货架绑定操作
+    }; 
+    //商品池状态（直接与数据库对应）
+    enum PoolStatus 
+    {   
+        E_STATUS_EDIT = 0,      //编辑中       	        
+        E_STATUS_ON_LINE = 1,       //上线（正常）         
+        E_STATUS_DELETE = 2,        //已删除 	                
+    };
+    // 商品范围信息类型
+    enum EMProdType
+    {    
+     	E_ALL_PROD = 1,            //全部商品（参与条件无效，剔除条件有效）
+     	E_SOME_PROD = 2,           //部分商品（参与条件剔除条件均有效）
+    };
+    //商品池范围信息
+    struct STScopeInfo
+    {
+        1 optional int iType = 1 ;                                 //类型：1全部商品，2部分商品
+        2 optional vector<VideoMall::STConInfo> vecAddCon;        //参与条件
+        3 optional vector<VideoMall::STConInfo> vecDelCon;        //剔除条件
+    };
+    //商品池池基本信息
+    struct STPoolBaseInfo
+    {
+    	1 optional string strId;                              //商品池ID
+        2 optional string strName;                            //商品池名称
+        3 optional int iStatus;                               //当前状态 
+        4 optional int iLastModityTime;                       //最近修改时间                                   
+    };
+    //商品池详细信息
+    struct STPoolInfo
+    {
+        1 require STPoolBaseInfo stPoolBaseInfo;               //商品池基本信息
+        2 optional string strDesc;                            //商品池说明
+        3 optional STScopeInfo stScopeInfo;                    //商品池范围   
+        4 optional vector<string> vecActivityId;               //关联活动ID
+        5 optional vector<string> vecShelvesId;                //关联货架ID
+    };
+
+    //商品池池范围信息 
+    struct STPoolScopeInfo
+    {
+        1 optional string strId;                              //商品池ID
+        2 optional string strName;                            //商品池名称、
+        3 optional STScopeInfo stScopeInfo;                   //商品池范围
+    };
+
+
+    //商品池列表获取 E_GET_POOL_LIST_CMD = 0xfa13
+    //条件：name,status
+    struct STGetPoolListReq
+    {
+        1 optional int iPage;                                 //页码
+        2 optional int iPageSize;                             //分页大小
+        3 optional map<string,string> mapCondition;           //查询条件
+    };
+    
+    struct STGetPoolListRsp
+    {
+        1 optional int iErrCode;
+        2 optional string strErrMsg;
+        3 optional vector<STPoolBaseInfo> vecPoolBaseInfo;    //本页商品池基础信息
+        4 optional int iTotal;                                //满足条件的全部商品池数量
+    };
+
+    enum EMAddEditPoolType
+    {    
+     	E_ADD_POOL = 1,            //全部商品（参与条件无效，剔除条件有效）
+     	E_EDIT_POOL = 2,           //部分商品（参与条件剔除条件均有效）
+    };
+    //新增修改商品池  E_ADD_EDIT_POOL_CMD = 0xfa14
+    struct STAddEditPoolReq
+    {
+        1 optional int iType;                    //1 新增、2 修改
+        2 optional STPoolInfo stPoolInfo;         //商品信息
+    };
+    struct STAddEditPoolRsp
+    {
+        1 optional int iErrCode;
+        2 optional string strErrMsg;        
+        3 optional string strPoolId;                //新增返回商品池ID
+    };
+
+    //删除、上线 商品池 E_OPERATE_POOL_CMD = 0xfa15
+    struct STOperatePoolReq
+    {
+        1 optional int iType;                    //1上线、 2删除 
+        2 optional string strPoolId;             //商品池ID
+    };
+    struct STOperatePoolRsp
+    {
+        1 optional int iErrCode;
+        2 optional string strErrMsg;        
+        3 optional string strPoolId;                //返回商品池ID
+    };
+
+
+    //读取商品池详情 E_GET_POOL_INFO_CMD = 0xfa16
+    struct STGetPoolInfoReq
+    {
+        1 optional vector<string> vecPoolId;    
+    };
+    struct STGetPoolInfoRsp
+    {
+        1 optional int iErrCode;
+        2 optional string strErrMsg;
+        3 optional  map<string,STPoolInfo> mapPoolInfo;     //商品池详情
+        //3 optional vector<STPoolInfo> vecPoolInfo;          //商品池详情
+    };
+
+    //读取商品池范围信息 E_GET_POOL_SCOPE_INFO_CMD = 0xfa2c
+    struct STGetPoolScopeInfoReq
+    {
+        1 optional vector<string> vecPoolId;    
+    };
+    struct STGetPoolScopeInfoRsp
+    {
+        1 optional int iErrCode;
+        2 optional string strErrMsg;
+        3 optional  map<string,STPoolScopeInfo> mapPoolScopeInfo; //商品池范围信息列表
+        //3 optional vector<STPoolScopeInfo> vecPoolScopeInfo;    //商品池范围信息列表
+    };    
+
+    //商品池更新类型
+    enum EMPoolNotifyType
+    {
+        E_NOTIFY_POOL_ADD = 1,        //添加
+        E_NOTIFY_POOL_EDIT = 2,       //修改
+        E_NOTIFY_POOL_ONLINE = 3,     //上线
+        E_NOTIFY_POOL_DELETE = 4,     //删除
+    };
+    //商品池更新中转  E_POOL_NOTIFY_CMD = 0xfa2d
+    struct STPoolNotifyReq
+    {
+        1 optional int iType;
+        2 optional string strId;                //商品池ID
+        3 optional STScopeInfo stScopeAddInfo;  //变更添加的范围
+        4 optional STScopeInfo stScopeDelInfo;  //变更删除的范围
+    };
+
+
+    //货架商品池绑定操作类型
+    enum EMShelvesPoolLinkType
+    {
+        E_SHELVES_POOL_LINK_ADD = 1,    //绑定
+        E_SHELVES_POOL_LINK_DEL = 2,    //解绑
+    };
+    //货架绑定，解绑商品池 E_SHELVES_POOL_LINK_CMD	= 0xfa37
+    struct STShelvesPoolLinkReq
+    {
+        1 optional int iType;
+        2 optional string strPoolId;      //商品池ID
+        3 optional string strShelvesId;   //货架ID 
+    };
+    struct STShelvesPoolLinkRsp
+    {
+        1 optional int iErrCode;
+        2 optional string strErrMsg;
+    };
+};

@@ -1,0 +1,69 @@
+
+module VMallQuery
+{	
+	//根据给定的条件进行商品搜索
+	struct STQueryReq
+	{
+		1 optional string strKeyWord;         //搜索关键字
+		2 optional string strCatId;
+		3 optional bool bIsHot;
+		4 optional map<string, vector<string> > mapCondition;   //暂时不用，用于对分类商品的进一步筛选,这里填属性和属性值
+		5 optional int iPageSize;
+		6 optional string strContext;
+	};
+	struct STQueryRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<string> vecProductIds;
+		4 optional string strContext;
+	};
+	
+	//获取我能兑换的商品列表
+	struct STGetExchangeReq
+	{
+		1 require int iVCoin;        //用户V币数
+		2 require int iType;		//1、纯V币 2、v币+现金 3、纯现金 
+		3 require int iPageSize;
+		4 require string strContext;
+	};
+	
+	struct STGetExchangeRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<string> vecProductIds;
+		4 optional string strContext;
+		//5 optional bool bHasNextPage;
+	};
+	
+	
+	//获取排序列表
+	enum emListType
+	{
+		E_ALL_PRODUCT = 1,			//获取所有商品的排序
+		E_PRI_CAT = 2,				//获取一级真实类目下商品排序
+		E_PRI_IP = 3,				//获取一级IP下二级IP的排序
+		E_SEC_IP = 4,				//获取二级IP类目下商品排序
+		E_ALL_IP = 5,				//获取所有二级IP的排序
+	};
+	
+	struct STGetSaleListReq
+	{
+		1 optional int iType;
+		2 optional string strKey;			//类目ID
+		3 optional int iPageSize;
+		4 optional string strContext;
+	};
+	
+	struct STGetSaleListRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<string> vecId;
+		4 optional string strContext;
+		5 optional bool bHasNextPage;
+	};
+	
+	
+};

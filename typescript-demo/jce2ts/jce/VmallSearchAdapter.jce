@@ -1,0 +1,355 @@
+// created by anthonydeng 2018/5/16
+
+#include "VideoMallComm.jce"
+
+module VmallSearchAdapter{
+    
+    /*读测试:
+    IP:
+    */
+	enum CMD_SEARCH_ADAPTER
+    {
+           CMD_SEARCH_PROD_REQ = 0xf671,               //B端搜索商品  (废弃)
+           CMD_MANAGE_SEARCH_PROD_REQ = 0xf88d,        //B端搜索商品 （分tab  重构后接口）
+           CMD_MALL_SEARCH_REQ = 0xf789,               //商城C端搜索:商品、IP、品类、活动
+           CMD_MALL_PRESET_WORD_REQ = 0xf7a0,          //预置词查询
+           CMD_MALL_OPERATION_WORD_REQ = 0xf7a1,       //运营词查询
+           CMD_MALL_HOT_WORD_REQ = 	0xf7a2,             //热词查询
+           
+    };
+
+    //IP信息
+	struct STSecIpData
+	{
+		0 optional string strId;
+		1 optional string strName;			//名称
+		2 optional string strPid;			//父类目ID
+		3 optional string strPname;			//父类目名称	
+		4 optional string strCid;			//关联CID
+		5 optional string strLid;			//关联LID
+		6 optional string strHorPic;		//横版图片
+		7 optional string strVerPic;		//竖版图片
+		8 optional string strDesc;			//类目介绍
+		9 optional int iStatus;				//状态
+		
+		//四期新增字段
+		10 optional string strMattingPic;	//抠图，如果有干预图的话会把这个图片替换掉
+		11 optional unsigned int uiProdNum;	//商品数
+		12 optional vector<string> vecProd;	//前三商品
+		13 optional unsigned int uiColor;	//底色
+		14 optional string strUrl;          //干预链接
+	};
+
+    //IP名称
+    struct STIpData
+	{
+		0 optional string strIpId;
+		1 optional string strIpName;
+	};
+    
+    //商品类目信息
+ 	struct STCatIpInfo
+	{
+		1 optional string strPid;				//一级类目ID
+		2 optional string strId;				//二级类目ID
+	};
+
+	//活动基本信息
+	struct STActBaseInfo
+	{
+		1 optional string strId;				//活动ID
+		2 optional string strName;				//活动名称
+		3 optional unsigned int uiProdNum; 		//商品数量
+		4 optional int iStatus;					//活动状态
+		5 optional int iOnlineTime;				//最近上线时间
+		6 optional int iType;					//活动类型
+		7 optional int iModifyTime;				//修改时间
+		
+		
+		//五期添加字段
+		8 optional bool bHasSale = false;		//有无促销
+		9 optional VideoMall::STSaleInfo stSaleInfo;		//促销信息
+		10 optional string strShortTitle;		//简称
+		11 optional string strUrl;              //干预链接
+	};
+	
+    struct STSkuInfo
+	{
+		1 optional string strProductId;  //商品ID
+		2 optional string strSkuId;      //skuid
+		3 optional string strImgUrl;     //图片
+		4 require  map<string,string> mapProp;	//SKU所包含的属性信息
+		5 optional int iQuantity;              //可卖库存：实际库存减预扣库存
+		6 optional int iSale;                  //销量
+		7 optional int iRealQuantity;					//总库存
+	};
+    //商品详细信息
+   	struct STProductInfo 
+	{
+		1 require string strProductId;				//商品ID
+		2 require string strTitle;					//商品名
+		
+		3 require string strImgUrl;					//图片
+		4 require int iStatus;
+		5 require int iQuantity;					//可卖库存
+		6 require int iSale;                        //销量
+		7 optional unsigned int uiVCoinPrice;		//V币价格
+		8 optional unsigned int uiCashPrice;		//现金价格
+		9 optional unsigned int uiOriPrice;		//原价
+		10 optional unsigned int uiPureVCoinPrice;
+		11 optional unsigned int uiPureCashPrice;
+		
+        12 optional vector<STSkuInfo> vecSku;	//SKU信息
+		13 optional int iSaleType;					//销售模式，0 正常 1预售
+		14 optional STCatIpInfo stCatData;		    //真实类目信息
+		15 optional vector<STCatIpInfo> vecIpData;	//IP类目信息
+		16 optional int iRealQuantity;				//总库存
+        
+        17 optional int iOnSaleTime;                //最近上架时间
+
+        //C端新增字段
+        18 optional unsigned int uiExpectPrice;	    //期望价格  ---最终外显价格，C端使用
+        19 optional unsigned int uiSpreadPrice;		//推广价格---C端用VIP价
+        20 optional string strMattingImg;			//抠图---C端用商品图片
+        21 optional vector<STIpData> vecIpName;		//IP名字--C端外显使用
+        22 optional vector<VideoMall::STPriceTag> vecSpreadPriceTag;	//推广价格标签
+        23 optional vector<VideoMall::STPriceTag> vecExpectPriceTag;	//期望价格标签
+        
+        24 optional vector<VideoMall::STScriptInfo> vecScript;			//商品角标
+		25 optional vector<VideoMall::STScriptInfo> vecActScript;		//活动角标
+		
+		26 optional VideoMall::STCredictInfo stCredictConf;			//积分配置
+	}; 
+    
+    //根据给定的条件搜索商品列表 B端 废弃
+    struct STSearchProductListReq
+    {
+        0 optional int iPageFlags;                                        //翻页规则0x01：上下文翻页 ;0x02:按页码翻页；
+        1 optional vector<VideoMall::STConInfo>  vecSearch;    			  //精确搜索参数（参考iFilerType）
+        2 optional string strFullSearch;                                  //全文搜索值
+        3 optional int iReqNum;					                          //翻页数量，选择按页码翻页时，前端传入一页请求的条数
+		4 optional int iCurPage;					                      //当前页码，从0开始
+		5 optional string strContext;                                     //请求上下文
+		6 optional int iFilterType; 								      //筛选类型（0：或搜索，1：与搜索）    
+    };
+    
+    struct STSearchProductListRsp
+    {
+	    0 require int iErrCode;					                     //业务错误码
+	    1 optional string strErrMsg;				                 //业务错误原因   
+        2 optional vector<STProductInfo> vecProduct;                 //商品详细信息
+		3 optional string strContext;                                //请求上下文
+        4 optional int iCurPage;                                     //当前第几页从0开始计数
+        5 optional int iPageNum;                                     //总的页数
+		6 optional bool bHasNext;                                    //是否还有数据
+		7 optional int iTotal; 									     //总数  
+    };
+
+
+    //商城C端搜索
+    struct STMallSearchReq
+    {
+        0 optional string strQuery;                                  //搜索关键词
+        1 optional int iSortFlags;                                   //商品搜索排序规则:0x01 综合排序； 0x02 销量排序；0x03上新时间排序
+        2 optional int iReqNum;					                     //翻页数量，前端传入一页请求的条数
+		3 optional int iCurPage;					                 //当前页码，从0开始
+		4 optional string strQueryContext;                           //搜索商品的上下文，对应prevQid，第一次传空，后续请求填写上次返回的，必须填写
+
+    };
+
+    struct STMallSearchRsp
+    {
+	    0 require int iErrCode;					                     //业务错误码
+	    1 optional string strErrMsg;				                 //业务错误原因  
+	    2 optional vector<STProductInfo> vecProduct;                 //商品详细信息
+	    //IP信息+类目信息
+	    3 optional vector<STSecIpData> vecCatIpData;	             //IP信息
+	    //活动信息
+	    4 optional vector<STActBaseInfo> vecActInfo;                 //活动信息
+	    //商品信息翻页
+        5 optional int iCurPage;                                     //当前第几页从0开始计数
+        6 optional int iPageNum;                                     //总的页数
+		7 optional int iTotal; 									     //总数，搜索结果中商品的总数	
+		8 optional string strQueryContext;                           //搜索的上下文
+    };
+
+    
+    //CMD_MALL_PRESET_WORD_REQ = 0xf7a0,          //预置词查询
+    struct STMallPresetWordReq
+    {
+        1 optional string strPlatform;            // 终端
+
+    };
+    
+    struct STMallPresetWordRsp
+    {
+	    0 require int iErrCode;					  //业务错误码
+	    1 optional string strErrMsg;			  //业务错误原因  
+	    2 optional vector<string> vecWord;                 //预置词    
+
+    };    
+
+    //CMD_MALL_OPERATION_WORD_REQ = 0xf7a1,       //运营词查询
+    struct STMallOperationWordReq
+    {
+        1 optional string strPlatform;            // 0为全部终端、1为移动APP、其他等待添加配置 
+
+    };
+
+    struct STOperationWordInfo
+    {
+        1 optional string strWord;               //运营词
+        2 optional string strUrl;                //跳转链接
+    };
+    
+    struct STMallOperationWordRsp
+    {
+	    0 require int iErrCode;				     //业务错误码
+	    1 optional string strErrMsg;		     //业务错误原因
+	    2 optional vector<STOperationWordInfo> vecWord;  //运营词
+
+    };    
+
+    //CMD_MALL_HOT_WORD_REQ = 0xf7a2,             //热词查询
+    struct STMallHotWordReq
+    {
+        1 optional string strPlatform;            // 终端
+
+    };
+
+    struct STHotWordInfo
+    {
+        1 optional string strWord;              //热词
+        2 optional bool bShowIcon;              //是否有火的Icon图标
+    };
+
+    struct STMallHotWordRsp
+    {
+	    0 require int iErrCode;					 //业务错误码
+	    1 optional string strErrMsg;             //业务错误原因  
+	    2 optional vector<STHotWordInfo> vecWord;         //热词
+    };
+    
+    
+    //-------------------------------B端搜索在线商品新接口 begin------------------------------------------//
+	//商品列表类目信息
+	struct STProdCatInfo
+	{
+		1 optional string strPriId;
+		2 optional string strSecId;
+		3 optional string strPriName;
+		4 optional string strSecName;
+	};
+	//商品列表折扣信息	
+	struct STProdDiscountInfo
+	{
+		1 optional unsigned int uiVCoin;
+		2 optional unsigned int uiVip;
+		3 optional unsigned int uiFresh;
+		5 optional unsigned int uiAct;
+		6 optional string strActId;
+		7 optional string strActName;
+		8 optional unsigned int uiPresale;			//预售折扣
+        9 optional VideoMall::STCredictInfo stCredict;		//积分抵扣
+	};
+	//商品列表预售信息
+	struct STProdPresaleInfo
+	{
+		1 optional int iPresaleType;   // 0 正常状态  1 预售
+		2 optional int iPresaleDiscount;
+		3 optional int iSaleStartTime;			//预售开始时间
+		4 optional int iDeliveryTime;			//发货时间
+		5 optional int iPresaleSubType;
+		6 optional VideoMall::STDepositInfo stDeposit;			//定金
+	};
+	//商品列表SKU信息
+	struct STProdSkuInfo
+	{
+		1 optional string strSkuId;
+		2 optional map<string,string> mapProp;		//规格
+		3 optional string strImgUrl;
+		4 optional unsigned int uiPureCashPrice;
+		5 optional unsigned int uiSale;
+		6 optional int iQuantity;
+		7 optional int iRealQuantity;  //正常库存
+		8 optional unsigned int uiSupplyPrice;		//供货价
+        9 optional int iStatus;					//SKu状态
+		10 optional unsigned int uiPayNum;			//SKU历史销量
+		11 optional int iLockQuan;					//锁定总库存  锁定库存
+		12 optional int iTotalQuan;					//总剩余库存（普通 + 锁定) 销售库存
+		13 optional unsigned int uiPercent;         //sku分成比例，渠道按比例分成时展示
+	};
+     
+    //价格区间值通用结构
+    struct STPriceScopeComm
+    {
+        1 optional unsigned int uiPriceBegin;  //区间最小值
+        2 optional unsigned int uiPriceEnd;    //区间最大值
+    };
+    
+	//商品列表信息
+	struct STProdListInfo
+	{
+		1 require string strProductId;						//商品ID
+		2 require string strTitle;							//商品名
+		3 optional vector<string> vecImgUrls;				//商品图片列表
+		4 optional int iStatus;
+		5 optional STProdCatInfo stCat;
+		6 optional vector<STProdCatInfo> vecIp;
+		7 optional unsigned int uiSale;
+		8 optional int iQuantity;
+		9 optional int iRealQuantity;   //正常库存
+		10 optional int iOnSaleTime;
+		11 optional int iOffSaleTime;
+		12 optional unsigned int uiPureCashPrice;			//商品基础价
+		13 optional STProdDiscountInfo stDiscount;			//折扣信息
+		14 optional STProdPresaleInfo stPresale;			//预售信息
+		15 optional vector<STProdSkuInfo> vecSku;			//SKU 信息
+        16 optional unsigned int uiPayNum;			//历史销量
+		17 optional int iLockQuan;					//锁定总库存 锁定库存 
+		18 optional int iTotalQuan;					//总剩余库存（普通 + 锁定)  销售库存
+        19 optional string strProdCus;              //商品定制信息
+        
+        //搜索这边新增
+        20 optional STPriceScopeComm  stSkuPureCashPriceScope;   //SKU基础价的区间值
+        21 optional STPriceScopeComm  stSkuVipPriceScope;        //SKUVIP价的区间值
+        22 optional STPriceScopeComm  stSkuFreshPriceScope;      //SKU新人价的区间值
+        23 optional STPriceScopeComm  stSkuActPriceScope;        //SKU活动价的区间值
+        24 optional STPriceScopeComm  stSkuSupplyPriceScope;     //SKU供货价的区间值
+        25 optional STPriceScopeComm  stSkuPreSalePriceScope;    //SKU预售价的区间值 
+        
+	};    
+    
+    //CMD_MANAGE_SEARCH_PROD_REQ = 	0xf88d;        //B端搜索商品 （分tab  重构后接口）
+    struct STManageSearchProductListReq
+    {
+        0 optional int iPageFlags;                                        //翻页规则0x01：上下文翻页 ;0x02:按页码翻页；
+        1 optional vector<VideoMall::STConInfo>  vecSearch;    			  //精确搜索参数（参考iFilerType）
+        2 optional string strFullSearch;                                  //全文搜索值
+        3 optional int iReqNum;					                          //翻页数量，选择按页码翻页时，前端传入一页请求的条数
+		4 optional int iCurPage;					                      //当前页码，从0开始
+		5 optional string strContext;                                     //请求上下文
+		6 optional int iFilterType; 								      //筛选类型（0：或搜索，1：与搜索）    
+		7 optional string strChannelId;                                   //渠道ID
+		8 optional int iRestrictType; 								      //限制类型EM_KTYPE（EM_KTYPE_PRODPOOL = 7商品池）
+		9 optional string strRestrictId; 							      //限制ID (限制ID，如果是商品池就是商品池ID)
+		
+    };
+    
+    struct STManageSearchProductListRsp
+    {
+	    0 require int iErrCode;					                     //业务错误码
+	    1 optional string strErrMsg;				                 //业务错误原因   
+        2 optional vector<STProdListInfo> vecProduct;                //商品详细信息
+		3 optional string strContext;                                //请求上下文
+        4 optional int iCurPage;                                     //当前第几页从0开始计数
+        5 optional int iPageNum;                                     //总的页数
+		6 optional bool bHasNext;                                    //是否还有数据
+		7 optional int iTotal; 									     //总数  
+    };    
+    
+    
+    //-------------------------------B端搜索在线商品新接口 end------------------------------------------//   
+    
+
+};

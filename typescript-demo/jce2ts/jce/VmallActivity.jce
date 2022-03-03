@@ -1,0 +1,722 @@
+#include "VideoMallComm.jce"
+//测试L5： 64393857:196608
+module VmallActivity
+{
+	enum EMActivityCmd
+	{
+		E_GET_ACT_LIST_CMD = 0xf49b,		//活动列表（B端）
+		E_ADD_ACT_CMD = 0xf49c,				//添加活动（B端）
+		E_GET_ACT_INFO_CMD = 0xf49d,		//活动详情（B端）
+		E_GET_PROD_ACT_LIST_CMD = 	0xf49e,	//商品活动列表（C端B端共用，C端读在线活动，B端读过审活动，重新开发）
+		E_GET_ACT_PROD_LIST_CMD =	0xf49f,	//活动商品列表（C端，未开发）
+		E_OPERATE_ACT_CMD = 	0xf4a0,		//操作活动（B端）
+		E_ACT_NOTIFY_CMD = 0xf4ab,			//活动中转
+		E_GET_ACT_BASE_CMD = 0xf4b0,		//获取活动信息（C端）商详页显示活动数据
+		E_ACT_NOTIFY_CMD_ONLINE = 0xf4f8,
+		E_GET_ONLINE_ACT_LIST = 0xf54f,		//获取线上活动列表(C端）
+		E_GET_ACT_SCOPE_INFO = 0xf550,		//获取活动范围信息（返回活动全部信息，C端）
+		E_GET_PROD_ACT_LIST_BATCH = 	0xf567,  //批量获取商品下活动列表
+		E_GET_QUALIFY_PROD_LIST = 0xf56d,		 //筛选符合活动规则的商品列表
+		E_GET_ACT_CHECK_CNT = 0xf65d,			//获取待审核活动数量
+		E_GET_ACT_INFO_CMD_NO_AUTH = 0xf7a8, //	获取活动详情，不鉴权，直接读DB，给搜索导活动数据使用
+		E_ADD_ACT_SKU = 0xf8fb,					//添加SKU活动配置(B端)
+		E_GET_SKU_VALID_ACT = 0xf907,			//计价使用，获取SKU参与的有效活动列表
+		E_COPY_ACT = 	0xf90d,					//复制活动(B端)
+		E_GET_SKU_ACT = 0xf929,					//获取SKU指定活动的信息
+		E_GET_PROD_ACT_SKU = 0xf96b,            //B端获取商品指定活动的sku活动价配置
+		E_GET_SECKILL_SKU_NOW = 0xf9b2,			//获取当前秒杀的SKU列表
+		E_GET_PROD_CONF_ACT_LIST = 0xf9c9,		//查询商品配置价格活动列表
+		E_GET_ACT_UNCONF_PROD = 	0xf9ce,		//获取活动下未配置价格的商品列表（B端）
+		E_GET_ACT_BY_LOCK_ID = 0xfa18,			//B端，根据锁定ID取对应的活动ID
+        E_GET_PROD_POOL_ACT = 0xfa41,           //获取商品池下活动列表，给搜索及商品池使用
+        E_EXCLUDE_PRODUCT_CMD = 0xfa4f,         //将商品从指定活动中排除(B端)
+        E_GET_MULTI_PROD_ACT = 0xfa76,			//B端，批量查询商品下的活动价设置，商品信息导出使用
+		
+	};
+		
+	enum EMAddActivityType
+	{
+		E_ADD = 1,
+		E_EDIT = 2,
+	};
+	
+	enum EMActivityStatus
+	{	
+		E_STATUS_ONLINE = 1,			//已上线
+		E_STATUS_OFFLINE = 2,			//已下线
+		E_STATUS_DELETE = 3,			//已删除
+		E_STATUS_IN_EDIT = 4,			//编辑中
+		E_STATUS_WAIT_CHECK = 5,		//待审核
+		E_STATUS_CHECK_OK = 6,			//审核通过
+		E_STATUS_CHECK_UNOK = 7,		//审核不通过
+		E_STATUS_PUBLISH = 8,			//发布到外网
+	};
+	
+	enum EMActivityOpType
+	{
+		E_OP_ONLINE = 1,
+		E_OP_OFFLINE = 2,
+		E_OP_DELETE = 3,
+		E_OP_RECALL = 4,		//撤回
+		E_OP_CHECK_OK = 5,		//审核通过
+		E_OP_CHEKC_UNOK = 6,    //审核不通过
+		E_OP_PUBLISH = 7,		//发布到外网 [暂不使用]
+        E_OP_HIDE = 8,          //隐藏活动   [暂不使用]
+        E_OP_SHOW = 9,          //显示活动   [暂不使用]
+	};
+	
+	enum EMActivityType
+	{
+		E_ACT_SYSTEM = 1,			//系统活动
+		E_ACT_OPERATE = 2,			//运营活动
+		E_ACT_SECKILL = 3,			//秒杀活动
+		E_ACT_OFFLINE = 4,			//线下活动
+		E_ACT_CHANNEL = 5,          //渠道活动（渠道）
+	};
+    
+    enum EMActivityShowType
+    {
+        E_ACT_SHOW = 0,  //活动正常展示 
+        E_ACT_HIDE = 1,  //活动对外隐藏
+    };
+	
+	//活动促销信息
+	
+	
+	
+	//活动基本信息
+	struct STActBaseInfo
+	{
+		1 optional string strId;				//活动ID
+		2 optional string strName;				//活动名称
+		3 optional unsigned int uiProdNum; 		//商品数量（废弃）
+		4 optional int iStatus;					//活动状态
+		5 optional int iOnlineTime;				//最近上线时间
+		6 optional int iType;					//活动类型
+		7 optional int iModifyTime;				//修改时间
+		
+		
+		//五期添加字段
+		8 optional bool bHasSale = false;		//有无促销
+		9 optional VideoMall::STSaleInfo stSaleInfo;		//促销信息
+		10 optional string strShortTitle;		//简称
+		
+		11 optional int iStartTime;				//活动开始时间
+		12 optional int iEndTime;				//活动结束时间
+        
+        13 optional int iHideAndShow;           //活动当前展示状态：0 展示；1 隐藏 参见EMActivityShowType
+        
+        14 optional int iLimitProdNum;          //活动限购商品数量，为0不限制
+		
+		15 optional string strChannelId;        //关联的渠道ID，为空不关联
+	};
+	
+	//根据Id获取活动基本信息，C端用
+	struct STGetActBaseReq
+	{
+		1 optional vector<string> vecId;
+	};
+	
+	struct STGetActBaseRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional map<string,STActBaseInfo> mapActInfo;
+	};
+	
+	
+	
+	
+
+	
+	struct STIpCatInfo
+	{
+		1 optional string strPriId;
+		2 optional string strPriName;
+		3 optional string strSecId;
+		4 optional string strSecName;
+	};
+	
+	//活动商品信息
+	struct STActProdInfo
+	{
+		1 optional string strId;
+		2 optional string strImg;
+		3 optional string strTitle;
+		4 optional int iStatus;
+		5 optional vector<STIpCatInfo> vecIpInfo;
+		6 optional STIpCatInfo stCatInfo;
+	};
+	
+	
+	//筛选条件
+	//strKey: "strProductId" 商品ID
+	//strCategoryId 二级真实类目ID
+	//strPriCatId,	一级真实类目ID
+	//strSellerId,	供应商ID
+	//strIpId,		二级IP ID
+	//strPriIpId,	一级IP ID
+	
+	
+	
+	
+	enum EMProdType
+	{	
+	     E_NO_PROD = 0,
+		 E_ALL_PROD = 1,
+		 E_SOME_PROD = 2,
+         E_PROD_POOL = 3,
+	};
+	
+	//活动范围信息
+	struct STScopeInfo
+	{
+		1 optional int iType = 0;				//类型，0 无商品 1全部商品，2部分商品, 3商品池
+		2 optional vector<VideoMall::STConInfo> vecAddCon;		//参与条件
+		3 optional vector<VideoMall::STConInfo> vecDelCon;		//剔除条件
+        4 optional vector<string> vecId;                        //商品池ID，目前只填1个
+	};
+	
+	
+	enum emPlayType
+	{
+		E_PLAY_NORMAL = 0,			//普通活动		（为兼容旧协议，从0开始）
+		E_PLAY_RAFFLE = 1,			//魔方抽奖
+	};
+	
+    enum emPlayDimension
+    {
+        E_PLAY_DIM_ORDER    = 0,    //以订单为维度统计次数，一个订单计一次
+        E_PLAY_DIM_PRODUCT  = 1,    //以商品为维度统计次数，一件商品计一次
+    };
+	//运营玩法
+	struct STPlayInfo
+	{
+		1 optional int iType;			//对应emPlayType
+		2 optional string strMagicId;	//魔方Id
+		3 optional string strModId;		//模块Id
+		4 optional vector<string> vecModId;		//多个模块ID
+        5 optional int iDimension;      //统计维度 见emPlayDimension
+	};
+	
+	enum emOnOffType
+	{
+		E_BY_HAND = 0,					//手动上架
+		E_RIGHT_NOW = 1,				//立刻上架
+		E_ON_TIME = 2,					//定时上架
+	};
+	
+	//上下架配置
+	struct STOnOffCfgInfo
+	{
+		1 optional int iType;			//对应emOnOffType
+		2 optional int iOnTime;		//上架时间
+		3 optional int iOffTime;	//下架时间
+	};
+	
+	//积分抵扣、特权抵扣信息
+	struct STProdDiscountInfo
+	{
+	    1 optional VideoMall::STCredictInfo stCredict;		//VIP 积分设置
+		2 optional vector<VideoMall::STDiscountInfo> vecDiscountInfo;	//特权抵扣信息
+		3 optional int iFreeShipping;                 //0 不包邮；1 渠道包邮 
+	};
+	
+	//SKU的活动配置信息
+	struct STActSkuInfo
+	{	
+		0 optional string strActId;
+		1 optional string strProdId;
+		2 optional string strProdName;
+		3 optional string strSkuId;
+		4 optional map<string,string> mapSkuProp;
+		5 optional unsigned int uiActPrice;
+		6 optional unsigned int uiBasePrice;
+		7 optional unsigned int uiSupplyPrice;          //渠道活动填写供货价
+		8 optional int iTotalQuan;						//隔离库存，批次ID为空时使用这个字段隔离库存
+		9 optional int iRemainQuan;
+		10 optional string strBatchId;					//优先使用批次ID，批次ID为空且总库存为0，表示不隔离库存
+		11 optional unsigned int uiBuyLimit;
+		12 optional int iActType;						//活动类型
+        13 optional string strActName;					//活动名称，只在批量读商品活动价接口使用
+        14 optional int bFreeShipping = 0;              //sku是否包邮:0不包邮，1包邮
+		15 optional unsigned int uiPercent;             //sku分成比例，当渠道选择按比例分成时可设置
+	};
+	
+	enum EMActSkuAddType
+	{
+		E_ACT_SKU_EDIT = 1,
+		E_ACT_SKU_DEL = 2,
+	};
+	
+	
+	//活动添加SKU的配置
+	struct STAddActSkuReq
+	{
+		1 optional int iType;						//1、添加/修改  2、核销
+		2 optional string strActId;
+		3 optional vector<STActSkuInfo> vecSku;
+		4 optional string strProdId;
+		5 optional STProdDiscountInfo stDiscountInfo;  //积分抵扣，特权抵扣信息
+	};
+	
+	struct STAddActSkuRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+	};
+	
+	
+	enum EMSeckillStatus
+	{	
+		E_SECKILL_NOT_START = 1,
+		E_SECKILL_ING = 2,
+		E_SECKILL_OVER = 3,
+	};
+		
+	// 秒杀信息
+	struct STSeckillInfo
+	{
+		1 optional int iStartTime;
+		2 optional int iEndTime;
+		3 optional int iStatus;				//1、未开始 2 进行中  3、已停止  
+	};
+	
+	//渠道类型
+	enum EMChannelType
+	{
+	     E_CHANNEL_CPS = 1, //CPS渠道
+		 E_CHANNEL_OPEN = 2, //商品开放平台
+	};
+
+	//渠道成本结算类型
+	enum EMChannelCostType
+	{
+	     E_CHANNEL_COST_PERCENT = 1,  //按比例分成
+		 E_CHANNEL_COST_SUPPLY_PRICE = 2, //渠道供货价分成
+	};
+	
+	//渠道特权
+	enum EMChannelPrivilege
+	{
+	     E_CHANNEL_PRI_NULL  = 0,   //无
+		 E_CHANNELL_PRI_VIP  = 1,   //腾讯视频VIP
+	};	
+	
+	//渠道成本结算信息
+	struct STChannelCostInfo
+	{
+	   1 optional int  iType;  //成本结算类型： 1 按比例分成  2 渠道供货价 见EMChannelCostType
+	   2 optional int  iPercent; //分成比例
+	};
+	
+	// 渠道信息
+	struct STChannelInfo
+	{
+	    1 optional int iType; // 渠道类型 1 CPS渠道， 2 商品开放平台 见EMChannelType
+		2 optional STChannelCostInfo stCost; //成本结算
+	    3 optional int iPrivilege; //渠道特权，0 无， 1腾讯视频VIP 见EMChannelPrivilege
+	};
+	
+	//活动详细信息
+	struct STActInfo
+	{
+		1 optional STActBaseInfo stBaseInfo;
+		2 optional string strBanner;						//Banner图
+		3 optional string strCustomUrl;						//专题连接
+		4 optional bool bUseCustomUrl;						//是否优先跳转专题页
+		5 optional string strDefaultUrl;					//默认的货架url
+		6 optional vector<STActProdInfo> vecActProd;		//活动商品列表（废弃）
+		7 optional vector<string> vecProdId;				//全量商品ID（废弃）
+		
+		//五期新增字段
+		8 optional string strDesc;							//活动说明
+		9 optional STScopeInfo stScopeInfo;					//活动范围
+		
+		10 optional string strThemeImg;						//主题图
+		11 optional unsigned int uiThemeColor;				//主题色
+		12 optional STPlayInfo stPlay;						//运营玩法
+		13 optional STOnOffCfgInfo stOnOffCfg;				//上下架设置
+		14 optional vector<unsigned int> vecColor;			//主题色值
+		
+		15 optional STSeckillInfo stSeckillInfo;			//秒杀信息
+		16 optional vector<STActSkuInfo> vecSku;			//SKU 信息
+		17 optional vector<string> vecUnConfProd;			//未设置价格的商品列表
+        
+        18 optional vector<VideoMall::STScriptInfo> vecScriptInfo; //活动角标信息
+		
+		19 optional STChannelInfo stChannelInfo;            //渠道相关配置，仅渠道活动需要这个配置
+		
+		20 optional vector<STScopeInfo>  vecScopeInfo;      //活动范围，配置的商品池是子商品池的时候会填充父商品池条件
+		
+		21 optional map<string, STProdDiscountInfo>  mapDiscountInfo;    //积分抵扣、特权抵扣信息,key为商品ID
+		
+		22 optional VideoMall::STScopeInfo stScopeInfoComm;  //Comm里面的范围格式
+	};
+    
+    //获取活动列表，B端
+	//条件：name,status,online_time,type,channel_id,is_channel
+	//is_channel=0，展示活动  is_channel=1，展示渠道
+	struct STGetActListReq
+	{
+		1 optional int iPage;
+		2 optional int iPageSize;
+		3 optional map<string,string> mapCondition;		
+	};
+	
+	struct STGetActListRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<STActBaseInfo> vecActInfo;//(废弃)
+		4 optional int iTotal;
+        5 optional vector<STActInfo> vecAllActInfo;  //新增，列表也返回全部信息
+	};
+	
+	//新增或修改活动
+	struct STAddActReq
+	{
+		1 optional int iType;					//1 新增 2 修改
+		2 optional STActInfo stActInfo; 		//活动信息,里面vecActProd只填ID，其它不填
+	};
+	
+	struct STAddActRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;		
+		3 optional string strActId;				//新增返回活动ID
+	};
+	
+	//读取活动详情
+	struct STGetActInfoReq
+	{
+		1 optional string strActId;
+		2 optional int iPage;					//用于商品列表的分页
+		3 optional int iPageSize;
+	};
+	
+	struct STGetActInfoRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional STActInfo stActInfo;
+		4 optional int iTotal;					//一共有多少个商品
+	};
+	
+	//活动操作，上线/下线
+	struct STOperateActReq
+	{
+		1 optional int iOpType;
+		2 optional string strId;				//活动ID
+		3 optional int iLastModityTime;			//修改时间，审核时防重
+	};
+	struct STOperateActRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional int iStatus;					//活动的新状态
+		4 optional int iOnlineTime;				//最近上线时间
+	};
+	
+	
+	enum EMProdActListType
+	{
+		E_CPROD_INFO_SCENE = 0,				//C端商品详情页调用
+		E_BPROD_INFO_SCENE = 1,				//B端商品详情页调用,会查DB获取是否配置价格的标志
+	};
+	
+	//获取商品的活动列表,C端使用
+	struct STGetProdActListReq
+	{
+		1 optional string strId;							//商品ID
+		2 optional int iType = 0;	   						//标志，表示场景
+		3 optional string strChannelId;                     //渠道ID，为空不检查
+		4 optional int iFlag;                               //0 返回活动，1 返回渠道
+	};
+	struct STGetProdActListRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<STActInfo> vecActInfo;		//商品所属活动信息
+		4 optional vector<bool> vecHasConfPrice;		
+	};
+	
+	
+	//批量获取商品下活动的列表，结算使用
+	struct STGetProdActListBatchReq
+	{
+		1 optional vector<string> vecProdId;		//商品ID
+		2 optional string strChannelId;             //渠道ID，为空不检查
+	};
+	struct STGetProdActListBatchRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional map<string,vector<STActInfo> > mapActInfo;
+	};
+	
+	
+
+	
+	enum EMActNotifyType
+	{
+		E_NOTIFY_ACT_ADD = 1,
+		E_NOTIFY_ACT_EDIT = 2,
+		E_NOTIFY_ACT_ONLINE = 3,
+		E_NOTIFY_ACT_OFFLINE = 4,
+		E_NOTIFY_ACT_DELETE = 5,
+		E_NOTIFY_ACT_CHECK_OK = 6,
+		E_NOTIFY_ACT_CHECK_UNOK = 7,
+		E_NOTIFY_ACT_RECALL = 8,
+		E_NOTIFY_ACT_PUBLISH = 9,
+        E_NOTIFY_ACT_HIDE = 10,
+        E_NOTIFY_ACT_SHOW = 11,
+		
+		E_PROD_SET_ACT_PRICE = 100,				//商品设置活动价
+	};
+	
+	//活动更新中转
+	struct STActNotifyReq
+	{
+		1 optional int iType;
+		2 optional string strId;
+		3 optional bool bTestFlag = true;
+		4 optional string strProdId;			//商品设置活动价时的商品ID
+	};
+	
+	
+	//上线活动列表
+	struct STGetOnlineActReq
+	{
+		1 optional unsigned int uiPageFlag;		//0x01 一次性全部  0x02 页码翻页 0x03 上下翻页
+		2 optional int iPageSize;				//页大小
+		3 optional int iCurPage;				//当前页码
+		4 optional string strContext;			//翻页上下文
+		5 optional vector<int> vecType;			//指定活动类型
+	};
+	
+	struct STGetOnlineActRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<string> vecId;
+		4 optional string strContext;		//翻页上下文
+		5 optional int iTotal;				//总数
+        6 optional bool bHasNextPage=false; //是否还有数据
+	};
+	
+	//活动范围信息（查活动配置的条件）
+	struct STGetActScopeReq
+	{
+		1 optional vector<string> vecId;
+        2 optional int iType;  //iType为0时走本地缓存;iType为1时不走本地缓存
+		3 optional int  iIsNewScope; //是否请求新格式条件  0 返回旧格式条件  1返回comm里面的新格式条件
+	};
+	
+	struct STGetActScopeRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional map<string,STActInfo> mapAct;
+	};
+	
+	//筛选符合规则的商品
+	struct STGetQualifyProdReq
+	{
+		1 optional string strActId;
+		2 optional vector<string> vecProdId;
+	};
+	
+	struct STGetQualifyProdRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<string> vecProdId;
+	};
+	
+	//获取待审核数量
+	struct STGetCheckActCntReq
+	{
+		1 optional int iTime;
+	};
+	
+	struct STGetCheckActCntRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional int iWaitCheckCnt;
+	};
+	
+	
+	//请求基本结构
+	struct STSkuActReqInfo
+	{
+		1 optional string strProdId;
+		2 optional string strSkuId;
+		3 optional vector<int> vecActType;
+		4 optional string strActId;		
+		5 optional string strChannelId;            //渠道ID，为空不检查		
+	};
+	
+	
+	//获取SKU参与的有效活动列表
+	struct STGetSkuValidActReq
+	{	
+		1 optional vector<STSkuActReqInfo> vecSku;
+		
+	};
+	
+	struct STGetSkuValidActRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional map<string,vector<STActInfo> > mapSkuAct;
+	};
+	
+	//查询SKU指定活动信息
+	struct STGetSkuActReq
+	{
+		1 optional vector<STSkuActReqInfo> vecSku;
+	};
+	
+	struct STGetSkuActRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional map<string,STActInfo> mapActSku;				//key是活动ID，SKU在STActInfo的Sku列表里
+	};
+	
+	
+	//复制活动
+	struct STCopyActReq
+	{
+		1 optional int iType;
+		2 optional string strActId;
+	};
+	
+	struct STCopyActRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional string strNewActId;
+	};
+	
+	//查询商品下SKU参与的指定活动配置 B端接口
+	struct STGetProdActSkuReq
+	{
+		1 optional string strProdId;
+		2 optional string strActId;
+	};
+	
+	struct STGetProdActSkuRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<STActSkuInfo> vecSku;
+		4 optional STProdDiscountInfo stDiscountInfo;  //积分抵扣，特权抵扣信息
+	};
+	
+	struct STGetSeckillSkuReq
+	{
+		1 optional int iType;
+	};
+	
+	struct STGetSeckillSkuRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<STActSkuInfo> vecSku;
+	};
+	
+	struct STGetProdConfActReq
+	{
+		1 optional string strProdId;
+	};
+	
+	struct STGetProdConfActRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<string> vecActId;
+	};
+	
+	
+	//获取活动下未配置价格商品列表
+	struct STGetActUnConfProdReq
+	{
+		1 optional string strActId;
+		2 optional int iPageSize;
+		3 optional int iPageFlag;				//0x01 上下文翻页 0x02 页码翻页
+		4 optional int iCurPage;
+		5 optional string strPageContext;
+	};
+	
+	struct STGetActUnConfProdRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<string> vecProdId;
+		4 optional int iTotal;
+		5 optional string strPageContext;
+		6 optional bool bHasNext;
+	};
+	
+	
+	//B 端，根据锁定ID取对应的活动信息
+	struct STGetActByLockReq
+	{
+		1 optional vector<string> vecLockId;
+	};
+	
+	struct STGetActByLockRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional map<string,STActInfo> mapAct;
+	};
+	
+    //获取商品池下活动列表，给搜索及商品池使用
+    struct STGetProdPoolActListReq
+    {
+       1 optional string strId; //Id值，商品池ID
+    };
+
+    struct STGetProdPoolActListRsp
+    {
+       1 require int iErrCode;					          //业务错误码
+	   2 optional string strErrMsg;				          //业务错误原因 
+       3 optional vector<string> vecId;                   //对应的活动ID
+    };
+    
+    //将商品从指定活动中排除(B端)
+    struct STExcludeProductReq
+    {
+      1  require string  strId;                      //活动ID
+      2  optional vector<string> vecProductId;       //需要剔除的商品ID列表
+    };
+    struct STExcludeProductRsp
+    {
+      1 require int iErrCode;					//业务错误码
+	  2 optional string strErrMsg;				//业务错误原因    
+    };
+    
+
+    //批量查询商品的活动价格,B端用
+	struct STGetMultiProdActReq
+	{
+		1 optional vector<string> vecProdId;
+	};
+	struct STGetMultiProdActRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional map<string,vector<STActSkuInfo> > mapProdAct;
+	};
+	
+};
+
+
+	
+		
+	
+	

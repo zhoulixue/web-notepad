@@ -1,0 +1,35 @@
+module VMallCert{
+    /*读测试:
+    L5:
+    */
+    enum CMD_CERTIFICATION
+    {
+           CMD_CHECK_ID_CARD_REQ = 0x62da,                  //检查身份信息
+    };
+
+    enum EM_ID_CHECK_STATUS
+    {
+        EM_ID_CHECK_NO_NEED = 0,        //无需认证
+        EM_ID_CHECK_OK = 1,             //认证成功
+        EM_ID_CHECK_FAILD = 2,          //认证失败
+    };
+
+    struct VmallCertGoodsInfo{
+        0 require string strProductId;        //商品ID
+        1 require string strSKUId;            //商品SKUID
+    };
+
+    //检查身份信息
+    struct VmallCheckIDCardReq{
+        0 require vector<VmallCertGoodsInfo> vecGoodsInfo;      //商品ID
+        1 optional int iNeedCheckStock = 1;                     //是否需要检查库存 1需要，0不需要
+    };
+
+    struct VmallCheckIDCardRsp
+    {
+        0 require int iErrCode;                                  //返回码
+        1 require string strErrMsg;                              //出错的原因描述
+        2 optional int iIDCheckStatus;                           //身份证认证状态
+        3 optional string strRealName;                           //认证实名
+    };
+};

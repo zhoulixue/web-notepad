@@ -1,0 +1,52 @@
+/*
+*	查询绑定账号协议
+*	Create on:2017-01-03
+*   Author: jackshi
+*/
+
+//调用地址：
+//测试环境L5:414849:2883585
+//正式环境L5:679553:65536
+
+//模调ID:210101522
+//接口ID列表：
+//	GET_BIND_ACCOUNT 110303490
+
+
+module GET_BIND_ACCOUNT
+{
+	//命令字定义
+	enum EM_ID_TRANS_CMD
+	{
+		GET_BIND_ACCOUNT_CMD = 0x1000,		//帐号查询
+	};
+	
+	//查询绑定帐号请求
+	struct StGetBindIdReq
+	{
+		0 require int type;			//1:qq 2:wx	vuserid 3:openid + appid 4:commonid
+		1 optional string id;		//qq号 或 微信的vuserid
+		2 optional int bid;			//ott 会员bid
+		3 optional string appid;	
+
+
+		200 optional int forceQueryWx;	//(请谨慎使用!!!)0：优先使用缓存数据 1：强制使用微信实时数据
+	};
+	
+	struct StGetBindIdRsp
+	{
+		0 require int errCode;						//错误码(0表示成功)
+		1 require string errMsg;					//错误信息
+		2 require short hasBindAccount;				//0 没有 1 有
+		3 require int bindAccountType;				//1 qq 2 wx
+		4 require string bindAccountID;				//qq号或vuserid
+		5 optional int isVip;						//绑定账号是否会员 0 不是 1 是
+		6 optional string action;					//action
+		7 optional int isSVip;						//绑定账号是否超级会员 0 不是 1 是
+		8 optional string bindAccountNickName;		//绑定账号昵称
+		9 optional string tips;						//绑定账号tips
+		10 optional int isBidVip;					//bid会员 0 不是 1 是
+		11 optional string commonid;				//commonid
+	};
+	
+};

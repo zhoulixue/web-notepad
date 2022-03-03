@@ -1,0 +1,30 @@
+#include "VideoMallComm.jce"
+
+module VideoMall
+{
+	struct STGoodsInfo
+	{
+		0 require string strCatId;			//商品类别id			
+		1 require string strProductId;		//商品id
+		2 require string strSKUId;			//商品SKUID
+		3 require unsigned int uiGoodsNum;	//商品数量
+		4 require STPriceInfo stPriceInfo;	//商品支付价格信息
+		5 optional int iActType;			//活动类型，emActType
+		6 optional string strActId;			//活动ID，比如线下、秒杀活动
+		7 optional string strDesignData; 	//用户定制信息（DesignKey等），json格式
+	};
+
+	//用户具有的支付属性
+	struct STUserPayProp
+	{
+		1 require long  lVCoinBalance;     	 	//用户V币余额（包含锁定的V币）
+		2 require long  lVCoinLockBalance;   	//锁定V币额
+	};
+
+	//用户具有的支付属性
+	struct UserPddGlodsProp
+	{
+		1 optional long iPddGlodsBalance;
+		2 optional long iPddGlodsLockBalance;  // 锁住的金币 是否需要
+	};
+};

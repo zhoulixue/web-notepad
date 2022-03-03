@@ -1,0 +1,1034 @@
+module VMallAdmin
+{
+	enum VMallAdminCmd
+	{
+		E_CMD_OPERATE_PRODUCT = 0xf23d,
+		E_CMD_MODIFY_DICT = 0xf243,
+		E_CMD_GET_DICT_LIST = 0xf244,
+		E_CMD_MODIFY_CAT_PROP = 0xf245,
+		E_CMD_MODIFY_SELLER = 0xf246,
+		E_CMD_GET_SELLER = 0xf247,
+		E_CMD_MODIFY_CAT = 0xf248,
+		E_CMD_GET_CAT = 0xf249,
+		E_CMD_GET_CAT_PROP = 0xf24a,
+		E_CMD_GET_SELLER_BY_QQ = 0xf240,
+		E_CMD_MODIFY_PRODUCT = 0xf23c,
+		E_CMD_MODIFY_QUANTITY = 0xf3c6,
+		E_CMD_GET_PUB_TEMPLATE = 0xf23b,
+		E_CMD_GET_PRODUCT_LIST = 0xf23e,
+		E_CMD_SAVE_DRAFT = 0xf24b,
+		E_CMD_GET_DRAFT = 0xf24c,
+		E_CMD_HOT_MGR = 0xf29f,
+		E_CMD_GET_DRAFT_BY_ID = 0xf2d3,
+		E_CMD_GET_ROLE_REQ = 0xf2e7,
+		E_CMD_GET_SELLER_LIST = 0xf36f,
+		E_CMD_GET_SELLER_BASE = 0xf3c1,
+		E_CMD_MODIFY_SUPPLY_PRICE = 0xf416,
+		E_CMD_GET_SKU_WARN_DATA = 0xf657,
+		E_CMD_GET_PROD_CHECK_CNT = 0xf658,
+		E_CMD_GET_SKU_STOCK_INFO = 0xf682,
+		E_CMD_MODIFY_QUANTITY_BATCH = 0xf6bf,
+		E_CMD_GET_PRESALE_PROD_DATA = 0xf7f5,
+		E_CMD_GET_STORE_LIST = 0xfbe6,
+		E_CMD_SKU_OP = 0xfcce,
+		E_CMD_CHECK_PROD = 0xfee2,
+		E_CMD_COUPON_RELATE = 0xffda,
+		E_ORDER_LOAD_PROD_INFO = 0x5cbe,			//订单导商品数据的接口，不查销量和库存，与productList共用协议
+	};
+	
+	enum emInputType    //输入类型
+	{
+		E_INPUT_TYPE_ENUM = 1,			//单选的枚举输入
+		E_INPUT_TYPE_ENUM_MULTI = 2,	//多选的枚举输入
+		E_INPUT_TYPE_INPUT = 3,			//单选的用户输入
+		E_INPUT_TYPE_INPUT_MULTI = 4,	//多选的用户输入
+		
+	};
+	
+	
+	//*************************************商品发布页提交数据****************************************//
+	
+	//商品属性值
+	struct STPropValInfo
+	{
+		1 optional string strVal;			//属性值
+		2 optional string strRemark;		//属性值备注
+	};
+	
+	//商品添加时使用
+	struct STPropWInfo
+	{
+		1 require string strPropLabel;				//属性ID
+		2 require string strPropName;				//属性中文名
+		3 require bool bIsSku;						//是否SKU属性
+		4 require int iInputType;					//输入类型
+		5 require vector<string> vecValue;      	//属性值列表
+		6 optional vector<STPropValInfo> vecPropVal;	//属性值列表，加备注，该字段使用后，5 字段废弃
+	};
+	
+	enum EMSkuStatus
+	{
+		E_SKU_STATUS_DELETE = 0,
+		E_SKU_STATUS_NORMAL = 1,
+		E_SKU_STATUS_UNSOLD = 2,			//不可卖，此时商品处于非上架状态
+		E_SKU_STATUS_HIDDEN = 3,			//隐藏
+	};
+	
+	struct STSkuPackage
+	{
+		1 optional string strSkuId;
+		2 optional int iNum;
+	};
+	
+	struct STSkuWInfo
+	{
+
+		3 require string strSerialNum;					//SKU序列号，商家自定，目前暂为空
+		4 require unsigned int uiVCoinPrice;			//组合价格中的V币价格
+		5 require unsigned int uiCashPrice;				//组合价格中的现金价格
+		6 require unsigned int uiPureVCoinPrice;		//纯V币价格
+		7 require unsigned int uiPureCashPrice;			//纯现金价格
+		8 require unsigned int uiOriPrice;				//原价
+		9 require int iQuantity;						//库存
+		10 require int iSaleNum;						//销量
+		11 require string strImgUrl;					//图片
+		12 optional map<string,string> mapProp2Val;		//SKU属性，如：2：白色；4：XL，表示颜色：白色且尺寸：XL
+		13 optional unsigned int uiBuyLimit = 100;		//限购数量
+		
+		14 optional int iRealQuantity;					//总库存
+		
+		15 optional string strSkuId;					//SKU ID
+		16 optional string strRemark;					//SKU备注信息
+		17 optional bool bFreezeQuan = false;			//是否可修改库存
+		
+		18 optional string strOuterId;					//第三方iD编码
+		
+		19 optional int iPresaleQuan = 0;				//预售库存，写入时为增量，读出时为全量
+		
+		20 optional int iLockQuan;						//锁定库存
+		21 optional int iLockHold;						//锁定预扣
+		
+		23 optional string strSkuCus;				    //定制信息，json串,{"strDesign":"123"}
+		
+		24 optional vector<STSkuPackage> vecPackage;	//套餐内SKU
+	};
+	
+	enum ProductStatus
+    {
+		E_STATUS_WAIT_COMMIT = 0,	//待提交
+		E_STATUS_WAIT_CHECK = 1,	//待审核
+		E_STATUS_CHECK_OK = 2,		//审核通过
+		E_STATUS_CHECK_FAIL = 3,	//审核不通过
+		E_STATUS_ON_SALE = 4,		//已上架
+		E_STATUS_OFF_SALE = 5,    	//已下架
+		E_STATUS_DELETE = 6,		//已删除
+		
+    };
+	enum enumProductOpType
+	{
+		E_PROUDCT_OP_PUBLISH = 1,	//发布(失效）
+		E_PRODUCT_OP_COMMIT = 2,	//提交（失效）	
+		E_PRODUCT_OP_RECALL = 3,	//撤回
+		E_PRODUCT_OP_APPROVE = 4,	//审核通过
+		E_PRODUCT_OP_REJECT = 5,	//审核不通过
+		E_PRODUCT_OP_ONSALE = 6,	//上架
+		E_PRODUCT_OP_OFFSALE = 7,	//下架
+		E_PRODUCT_OP_EDIT = 8,		//编辑（这里只用于商品列表处的显示，不用做实际的操作码）
+		E_PRODUCT_OP_DELETE = 9,	//删除
+	};
+	
+	enum emOnSaleType
+	{
+		E_ONSALE_AT_ONECE = 0,
+		E_ONSALE_BY_HAND = 1,
+		E_ONSALE_ON_TIME = 2,
+	};
+	
+	enum emSaleType
+	{
+		E_SALE_TYPE_NORMAL = 0,
+		E_SALE_TYPE_PRESALE = 1,
+	};
+	
+	enum emAddSellerType
+	{
+		E_NORMAL_SELLER = 0,
+		E_OWN_SELLER = 1,
+	};
+	
+	struct STCatIpInfo
+	{
+		1 optional string strPid;				//一级类目ID
+		2 optional string strId;				//二级类目ID
+		3 optional string strPriName;
+		4 optional string strName;
+	};
+	
+	
+	
+	struct STDisInfo
+	{
+		0 optional bool bIsSelect = false;		//是否勾选
+		1 optional unsigned int uiVCoin;		//V币折扣
+		2 optional unsigned int uiCash;			//现金折扣
+		3 optional string strId;				//关联ID
+		4 optional string strName;				//折扣标签
+	};
+	
+	enum emCredictType
+	{
+		E_DEDUCT_NULL = 0,
+		E_DEDUCT_TOTAL = 1,				//全部抵扣
+		E_DEDUCT_PARTIAL = 2,			//部分抵扣
+	};
+	
+	//积分抵扣配置信息
+	struct STCredictInfo 
+	{
+		1 optional int iType;				//抵扣类型，对应emCredictType
+		2 optional bool bForce = false;		//强制使用
+		3 optional unsigned int uiCredict;		//积分
+		4 optional unsigned int uiCash;			//现金
+	};
+	
+	
+	enum emProdCouponRelateStatus
+	{
+		E_RELATE_STATUS_ON = 0,
+		E_RELATE_STATUS_OFF = 1,
+	};
+	
+	enum emPresaleType
+	{
+		E_PRESALE_TYPE_FULL = 0,			//全款预售
+		E_PRESALE_TYPE_DEPOSIT = 1,			//定金预售
+        E_PRESALE_TYPE_CROWD_FUNDING = 2,   //众筹
+	};
+	
+	//扩展信息字段列表
+	//iPresaleType  预售类型， 0 -- 普通预售，1 -- 定金预售,2 -- 众筹
+	//iDepStartTime 定金支付时间，秒级时间戳
+	//iDepEndTime  定金支付结束时间
+	//iDepRatio  支付比例，15%的话填“15”
+	//iRestStartTime  尾款支付时间
+	//iRestEndTime  尾款支付结束时间
+	//iMarketType  供销类型
+	//supply  供货商
+	//iCrowdStartTime   众筹开始时间， iCrowdEndTime  众筹结束时间   uiTargetNum   众筹目标件数
+	
+	struct STProductWInfo
+	{
+		1 require string strProductId;			//ID,创建商品时商品ID填0 
+		2 require string strTitle;				//名字
+		3 require string strCatId;				//实际类别
+		4 optional string strViewCatId;			//外显类别
+		7 optional vector<string> vecImgs;		//商品图片列表
+		8 optional unsigned int uiExpressFee;	//快递费用
+		9 optional bool bIsExpressFree;			//是否免邮
+		11 optional int iOnSaleTime;			//上架时间
+		12 optional int iOffSaleTime;			//下架时间
+		19 optional map<string,STPropWInfo> mapId2Props;       	//商品属性和值，包括SKU的属性。
+		20 optional vector<STSkuWInfo> vecSkus;					//商品的SKU列表
+		21 optional int iStatus;                         	    //防止修改商品期间商品状态发生变化
+		22 optional string strContent;							//商品的文字描述
+		23 optional vector<string> vecImgDesc;					//商品的图片描述
+		24 optional vector<string> vecLabel;					//商品标签
+		
+		//二期新增字段
+		26 optional vector<string> vecIpList;					//IP列表
+		27 optional int iOnSaleType;							//上下架方式，0 立刻上架 1 手动 2定时
+		28 optional int iSaleType;								//销售方式，0 普通 1预售
+		29 optional int iPreSaleTime;							//预计发货时间，预售用
+		30 optional string strMattingImg;						//产品抠图
+		31 optional int iSellerType;							//卖家类型，0 普通 1 自营
+		32 optional string strSeller;							//卖家ID
+		33 optional int iExpTemId;								//邮费模板ID
+		34 optional int iRePolicyId;							//退换货策略ID
+		35 optional bool bHasDiscount;							//是否有优惠
+		36 optional unsigned int uiVCoin;						//二期字段，已废弃
+		37 optional unsigned int uiCash;						//二期字段，已废弃
+		38 optional string strPriCat;						//真实类目信息
+		39 optional vector<STCatIpInfo> vecIpData;				//IP类目信息
+		40 optional map<string,string> mapExtData;				//扩展信息
+		
+		//三期字段
+		41 optional int iSaleStartTime;							//上架后，真正开始销售的时间
+		42 optional STDisInfo stVCoinDiscount;				//V币折扣信息列表
+		43 optional STDisInfo stVipDiscount;			    //VIP 折扣
+		
+		//五期字段
+		44 optional vector<STDisInfo> vecActDiscount;			//活动价
+		45 optional vector<STDisInfo> vecPriDiscount;			//身份价
+		
+		46 optional int iRealQuantity;							//总库存
+		
+		47 optional string strShortTitle;						//商品简称
+		48 optional vector<string> vecSearchWord;				//商品搜索关键词
+		
+		49 optional unsigned int uiWeight = 0;						//重量,单位（g）
+		50 optional unsigned int uiLength = 0;						//长度，单位（mm）
+		51 optional unsigned int uiWidth = 0;						//宽度，单位（mm）
+		52 optional unsigned int uiHeight = 0;						//高度，单位（mm）
+		
+		53 optional unsigned int uiPresaleDiscount;				//预售折扣
+		
+		54 optional int iQuantity;								//商品总可卖库存
+		55 optional int iOwner = 0;									//商品负责人ID
+		
+		56 optional string strScript;							//角标
+		
+		57 optional int iTotalQuan;					//总剩余库存（普通 + 锁定)
+		58 optional int iLockQuan;					//锁定总库存
+		59 optional unsigned int uiTotalSale;		//总销量（普通+锁定）
+		60 optional unsigned int uiLockSale;		//锁定总销量
+		61 optional int iLockHold;					//锁定预扣库存
+		
+		62 optional string strStorehouse;			//仓储
+		63 optional string strJdCategory;			//京东类目ID
+		
+		64 optional string  strNewScript;			//角标配置，json格式，参考VideoMallComm.jce里的定义，该字段使用后，56 字段废弃
+		
+		65 optional STCredictInfo stCredict;		//积分配置
+		
+		66 optional string strCredictTpl;			//积分赠送模板
+		
+		67 optional int iCouponRelate;				//是否关联优惠券，0 关联， 1 不关联 
+		
+		68 optional string strProdCus;			//商品定制信息，json串,{"bCustom":false}
+	};
+	
+	
+	
+	enum ModifyType
+	{
+		E_ADD_PRODUCT = 1,				//添加商品
+		E_RECOMMIT_PRODUCT = 2,			//重新提交商品
+		E_UPDATE_PRODUCT = 3,			//更新商品
+	};
+	
+	
+	//商品信息修改（包括添加和更改）
+	struct STModifyProductReq
+	{
+		1 require STProductWInfo stInfo;
+		2 require int iLastStatus;
+		3 optional int iOpType;
+	};
+	struct STModifyProductRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional string strProductId;			//添加商品时，返回的商品ID
+	};
+	
+	
+	
+	//***************************************************************商品管理相关************************//
+	
+	
+	//对商品的操作，包括审核通过、不通过、上下架，这里只包括会导致状态变化的操作，以上架的商品商家进行的编辑修改不需要这个接口，直接调更新接口即可
+	//cmd 0x1ef5
+	struct STOperateProductReq
+	{
+		1 require int iOperateType;		//操作类型
+		2 require string strProductId;	//商品ID
+		3 require int iLastModifyTime;	//最后修改时间，用于验证商品是否已修改
+	};
+	
+	struct STOperateProductRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional int iStatus;
+		4 optional vector<int> vecOp;
+		5 optional int iModifyTime;
+	};
+	
+	
+	//修改SKU供货价
+	struct STModifySupplyPriceReq
+	{
+		0 optional unsigned int uiPrice;
+		1 optional vector<string> vecSku;
+	};
+	struct STModifySupplyPriceRsp
+	{
+		0 optional int iErrCode;
+		1 optional string strErrMsg;
+	};
+	
+	enum EMModifyQuanType
+	{
+		EM_MODIFY_SOLD = 0,		//直接修改可卖
+		EM_MODIFY_INC = 1,		//增量修改
+	};
+	
+	struct STStockInfo
+	{
+		1 optional unsigned int uiSupplyPrice = 0;
+	};
+	
+	//修改商品库存
+	struct STModifyQuantityReq
+	{
+		0 optional string strProductId;
+		1 optional map<string,int> mapSku2Num;
+		2 optional int iType = 0;
+		3 optional map<string,STStockInfo> mapSkuStock;
+		4 optional string strStockId;
+	};
+	
+	struct STModifyQuantityRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+	};
+	
+	struct STSkuListInfo
+	{
+		1 optional string strProductId;
+		2 optional string strSkuId;
+		3 optional string strImgUrl;
+		4 optional map<string,string> mapProp;
+		5 optional int iQuantity;
+		6 optional int iSale;
+		
+		//三期字段
+		7 optional unsigned int uiSupplyPrice;			//供货价
+		
+		8 optional int iRealQuantity;					//总库存
+		9 optional bool bFreezeQuan = false;			//是否可修改库存
+		
+		10 optional string strSerialNum;				//SKU 序列号
+		
+		11 optional int iTotalQuan;					//总剩余库存（普通 + 锁定)
+		12 optional int iLockQuan;					//锁定总库存
+		13 optional unsigned int uiTotalSale;		//总销量（普通+锁定）
+		14 optional unsigned int uiLockSale;		//锁定总销量
+		15 optional int iLockHold;					//锁定预扣库存
+		16 optional unsigned int uiPayNum;			//历史销量
+	};
+	
+	struct STProdListActPriceInfo
+	{
+		1 optional string strActId;
+		2 optional string strActName;				//活动名
+		3 optional string strSkuId;					//SKU ID
+		4 optional unsigned int uiActPrice;			//活动价
+	};
+	
+	struct STProductListInfo   
+	{
+		1 require string strProductId;				//商品ID
+		2 require string strTitle;					//商品名
+		
+		5 require string strImgUrl;					//图片
+		6 require int iModifyTime;
+		7 require int iStatus;
+		8 require int iQuantity;					//可卖库存
+		9 require int iSale;
+		10 optional unsigned int uiVCoinPrice;		//V币抵扣数
+		11 optional unsigned int uiCashPrice;		//V币抵扣现金数
+		12 optional unsigned int uiOriPrice;		//原价
+		13 optional unsigned int uiPureVCoinPrice;
+		14 optional unsigned int uiPureCashPrice;
+		
+		//二期新增字段
+		15 optional vector<STSkuListInfo> vecSku;	//SKU信息
+		16 optional vector<int> vecOp;				//可执行操作列表
+		17 optional int iOffSaleTime;				//下架时间
+		18 optional int iSaleType;					//销售模式，0 正常 1预售
+		19 optional STCatIpInfo stCatData;						//真实类目信息
+		20 optional vector<STCatIpInfo> vecIpData;				//IP类目信息
+		21 optional map<string,string> mapExtData; 				//扩展信息
+		22 optional int iRealQuantity;							//总库存
+		
+		23 optional int iOnSaleTime;				//上架时间
+		
+		24 optional string strSeller;				//供应商
+		25 optional string strSupplier;				//供货商
+		
+		
+		27 optional unsigned int uiVipPrice;			//VIP价格
+		28 optional unsigned int uiFreshPrice;		//新人价格
+		29 optional unsigned int uiPresalePrice;	//预售价格
+		30 optional int iDeliveryTime;				//预计发货时间
+		31 optional int iSaleStartTime;				//预售开始时间
+		32 optional int iOwner;						//商品负责人
+		33 optional int iFirstOnSaleTime;			//初始上架时间
+		34 optional vector<STProdListActPriceInfo> vecProdActPrice;			//活动价信息
+		35 optional string strOwner;				//负责人名
+		
+		36 optional int iTotalQuan;					//总剩余库存（普通 + 锁定)
+		37 optional int iLockQuan;					//锁定总库存
+		38 optional unsigned int uiTotalSale;		//总销量（普通+锁定）
+		39 optional unsigned int uiLockSale;		//锁定总销量
+		40 optional int iLockHold;					//锁定预扣库存
+		41 optional unsigned int uiPayNum;		
+		42 optional string strProdCus;				//商品定制信息，json串
+		
+	};
+	
+	enum EMTabType
+	{
+		E_TAB_OFL = 0,			//非线上商品tab
+		E_TAB_OL = 1,			//线上商品tab
+	};
+	
+	//查询条件和对应可选值
+	// status -- 各个状态的ID
+	// is_hot -- 0 或者 1
+	// seller -- 卖家ID
+	//pri_cat --
+	//pri_ip  --
+	// view_cat -- 外显类别ID
+	// cat -- 实际类别ID
+	// quantity -- suf(充足） ner(库存紧张） no（无库存）
+	// prod_id -- 商品ID
+	//按商品状态获取商品，管理台使用
+	struct STGetProductListReq       
+	{
+		1 require map<string,string> mapCondition;    //查询的条件
+		2 require int iPageSize;						//一页显示的商品数目
+		3 require string strContext;					//
+		4 optional int iTab = 0;						//对应EMTabType
+	};
+	
+	struct STGetProductListRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<STProductListInfo> vecProduct;
+		4 optional string strContext;
+	};
+	
+	enum emHotMgrType
+	{
+		E_ADD_TO_HOT = 1,		//加入精选
+		E_DEL_FROM_HOT = 2,		//移出精选
+	};
+	
+	//精选管理，暂时未使用
+	struct STHotMgrReq
+	{
+		1 require int iType;					//1、加入精选  2、移出精选
+		2 require vector<string> vecProductIds;
+	};
+	struct STHotMgrRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+	};
+	
+	//*********************************************************商品发布页获取的数据******************//
+	struct STLabelInfo
+	{
+		1 require string strLabelId;
+		2 require string strLabelName;
+		3 require string strLabelDesc;
+		4 optional int iLabelType;
+	};
+	
+	
+	struct STValRInfo
+	{
+		1 require string strId;		//属性值ID
+		2 require string strName;	//属性值中文
+	};
+	struct STCatPropRInfo
+	{
+		1 require string strPropId;					//属性ID，如：4
+		2 require string strPropName;				//属性名字，如：尺寸
+		3 require int iInputType;					//输入类型
+		4 require int iDataType;					//数据类型，即改属性对应的属性值的真实数据类型，
+		5 require bool bIsSku;						//是否为SKU属性	
+		6 require bool bIsRequire;					//是否为必填属性
+		7 require int iOrder;						//属性展示的顺序
+		8 require int iStatus;						//属性状态
+		9 require unsigned int uiMaxLen;			//可填的最大长度（暂时不用）
+		10 optional vector<int> vecROnlyStatus;		//只读状态列表（暂时不用）
+		11 optional bool bIsReadOnly;				//是否只读（暂时不用）
+		12 optional vector<STValRInfo> vecOptions;	//可选属性值列表，只有当输入类型为枚举时才有
+	};	
+	
+	
+	
+	
+	//获取发布商品所需的信息
+	struct STGetPubTemplateReq
+	{
+		1 require string strCatId;         //发布商品，必须传入catid,productId为“0”
+		2 require string strProductId;     //编辑商品，必须传入productId，此时catId会被忽略
+	};
+	
+	struct STGetPubTemplateRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		4 optional vector<STCatPropRInfo> vecPropField;
+		5 optional bool bHasInfo;
+		6 optional STProductWInfo stInfo;
+		7 optional vector<STLabelInfo> vecLabel;
+		//二期新增字段
+		8 optional vector<STLabelInfo> vecExpTemp;
+		9 optional vector<STLabelInfo> vecRePolicy;
+		10 optional vector<STLabelInfo> vecOptLabel;			//从vecLabel中取中间几个填入
+		11 optional vector<STDisInfo> vecPriDiscount;			//身份特权列表
+		
+	};
+	
+	
+	//******************************************************商家信息**********************************//
+	enum emSellerType
+	{
+		E_COR_SELLER = 1,			//合作供应商
+		E_SUPPLIER = 2,			//	供货商
+		E_ADMIN_SELLER = 3,			//运营供应商
+	};
+	
+	struct STSellerInfo
+	{
+		1 require string strSellerId;		//商家ID
+		2 require string strName;			//商家名字
+		3 require string strOrcId;			//结算信息
+		4 require string strOrcName;		//结算信息
+		5 require string strCltId;			//结算信息
+		6 require string strCltName;		//结算信息
+		7 require vector<long> vecUins;		//商家关联的QQ号列表
+		//二期新增字段
+		8 optional int iType;
+		9 optional string strPerson;		//商家服务信息，json ,key:  phone(服务电话) time(服务时间) service_qq(服务QQ） mail(邮件) address(联系地址）
+		10 optional string strExtInfo;		//json，key: desc(运营范围简介）
+		
+	};
+	//0x1f02 添加或修改商家信息
+	struct STModifySellerReq
+	{
+		1 require STSellerInfo stInfo;
+	};
+	struct STModifySellerRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional string strSellerId;			//添加商家时返回的商家ID
+	};
+	// 读取商家信息
+	struct STGetSellerReq
+	{
+		1 require vector<string> vecIds;
+	};
+	struct STGetSellerRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional map<string,STSellerInfo> mapId2Info;
+	};
+	
+	//根据QQ号读取商家信息
+	//
+	struct STGetSellerByQQReq
+	{
+		1 require long ddwUin;
+	};
+	struct STGetSellerByQQRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional STSellerInfo stInfo;
+	};
+	
+	
+	//二期新增接口，用于获取列表页中展示的商家信息
+	struct STGetSellerListReq
+	{
+		1 optional int iPage;
+		2 optional int iPageSize;		//PageSize == 0表示不分页，用于获取简单的商家列表，只包含ID和名字
+		3 optional map<string,string> mapCondition;
+	};
+	
+	struct STGetSellerListRsp
+	{	
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<STSellerInfo> vecSeller;
+		4 optional int iTotal;
+	};
+	
+	
+	//**************************************************旧类别接口**********************************//
+	enum emCatType
+	{
+		EM_CAT_TYPE_REAL = 1,	//真实类别
+		EM_CAT_TYPE_VIEW = 2,	//外显类别
+	};
+	enum emCatStatus
+	{
+		EM_CAT_STATUS_DELETE = 0,	//类别已删除
+		EM_CAT_STATUS_NORMAL = 1,	//类别正常
+	};
+		
+	
+		
+	//商品类别信息，写商品类别时使用
+	struct STCatInfo
+	{
+		1 require string strCatId;			//类别ID
+		2 require int iType;      			//类别类型
+		3 require string strName; 			//类别名字
+		4 optional double dfProfitRatio;	//费率
+		5 optional int iStatus;				//状态
+		6 optional vector<STCatPropRInfo>  vecProp;
+	};
+	
+	
+	
+	//0x1f04 添加、修改分类
+	struct STModifyCatReq
+	{
+		1 require STCatInfo stInfo;
+		
+	};
+	struct STModifyCatRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional string strCatId;
+	};
+	
+	//读取分类信息
+	//0x1f05
+	struct STGetCatReq
+	{
+		1 require vector<string> vecCatId;      //0 表示取所有类别
+	};
+	struct STGetCatRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional map<string,STCatInfo> mapCatInfo;
+	};
+	
+	
+	
+	enum emDataType
+	{
+		EM_DATA_TYPE_INT = 1,		//整型
+		EM_DATA_TYPE_STRING = 2,	//字符串
+		EM_DATA_TYPE_DOUBLE = 3,	//浮点
+	};
+	
+	
+	
+	
+	struct STGetCatPropReq
+	{	
+		1 require string strCatId;
+	};
+	struct STGetCatPropRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<STCatPropRInfo> vecProp;
+	};
+	
+	
+	//增加或者修改类别所包含的属性信息
+	struct STCatPropWInfo             
+	{
+		1 require string strPropId;
+		2 require int iInputType;
+		3 require int iDataType;       			//实际数据类型
+		4 require unsigned int uiMaxLen;
+		5 require bool bIsSku;
+		7 require bool bIsRequire;
+		8 require int iOrder;
+		9 require vector<int> vecROnlyStatus;     //未使用
+		10 require int iStatus;
+		
+		11 optional vector<string> vecValues;   //该属性的可选属性值列表，只有在可枚举情况下才有这一项                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+	};
+	
+	//0x1f01 修改或添加类别所有的属性相关信息
+	struct STModifyCatPropReq
+	{	
+		1 require string strCatId;
+		2 require map<string,STCatPropWInfo> mapId2Prop;
+	};
+	struct STModifyCatPropRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+	};
+	
+	
+	
+	//***********************************************************字典表数据****************************//
+	enum emDictType
+	{
+		E_ID_TYPE_PROP = 1,
+		E_ID_TYPE_VAL = 2,
+	};
+	
+	//读写字典表时使用
+	struct STDictInfo
+	{
+		1 require string strId;			//ID 
+		2 require string strName;		//中文含义
+		3 require string strEnName;		//英文名
+		4 require int iType;          	//1、属性，2属性值
+		5 require int iStatus;        	//0、废弃 1、正常
+	};
+	
+	//0x1ef9,添加或者修改字典表，包括属性ID和属性值ID
+	struct STModifyDictReq
+	{
+		1 require vector<STDictInfo> vecDicts;
+	};
+	struct STModifyDictRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+	};
+	
+	struct STGetDictListReq
+	{
+		1 require int iType;
+	};
+	struct STGetDictListRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<STDictInfo> vecDict;
+	};
+	
+	//***********************************************************草稿页******************************//
+	//存草稿
+	//0x1f09
+	struct STSaveDraftReq
+	{
+		1 require string strSellerId;	//商家ID
+		2 require string strJsonDraft;	//草稿内容
+	};
+	struct STSaveDraftRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional string strDraftId;
+	};
+	
+	//读草稿
+	//0x1f0a
+	struct STGetDraftReq
+	{
+		1 require string strSellerId;
+		
+	};
+	struct STGetDraftRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional string strJsonDraft;
+	};
+	
+	
+	//根据草稿ID查草稿
+	struct STGetDraftByIdReq
+	{
+		1 require string strDraftId;
+	};
+	struct STGetDraftByIdRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional string strDraft;
+	};
+	
+	
+	
+	//*************************************************权限接口**************************************//
+	
+	//查询用户的角色类型, 0xf2e7
+	struct STGetRoleReq
+	{
+		1 optional int iType;		//暂时不用，请求用户的QQ号从登录态获取
+		2 optional string strId;	//暂时不用
+	};
+	struct STGetRoleRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional unsigned int uiRole;		//角色类型，0x01卖家，0x02运营，可能有多种身份
+		4 optional string strExtInfo;       //角色附带的额外信息，比如商家的商家ID
+	};
+	
+	
+	struct STSkuWarnData
+	{
+		1 optional string strSkuId;
+		2 optional string strProdId;
+		3 optional string strProp;
+		4 optional string strTitle;
+		5 optional string strSeller;
+		6 optional int iQuantity;
+	};
+	
+	
+	//提醒的数据
+	struct STGetWarnSkuReq
+	{
+		1 optional vector<string> vecSku;
+	};
+	struct STGetWarnSkuRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional map<string,STSkuWarnData> mapSkuData;
+	};
+	
+	struct STGetProdCheckCntReq
+	{
+		1 optional int iTime;
+		2 optional string strSeller;
+	};
+	
+	struct STGetProdCheckCntRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional int iWaitCheckCnt;
+	};
+	
+	struct STCatCommInfo
+	{
+		1 optional string strPriId;
+		2 optional string strPriName;
+		3 optional string strSecId;
+		4 optional string strSecName;
+	};
+	
+	//进货管理查SKU信息的接口
+	struct STSkuStockInfo
+	{	
+		1 require string strSkuId;
+		2 optional string strProdId;
+		3 optional string strProdTiTle;
+		4 optional map<string,string> mapProp;
+		5 optional string strSerialNum;
+		
+		6 optional STCatCommInfo stCat;
+		7 optional vector<STCatCommInfo> vecIp;
+		8 optional string strOuterId;
+		9 optional int iTotalQuan;
+		10 optional string strStore;
+		11 optional string strSeller;
+	};
+	
+	struct STGetSkuStockInfoReq
+	{
+		1 optional vector<string> vecSkuId;
+	};
+	
+	struct STGetSkuStockInfoRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional map<string,STSkuStockInfo> mapSkuInfo;
+	};
+	
+	//获取预售发货时间的商品数，按照商家维度返回
+	struct STGetPresaleProdCntReq
+	{	
+	    1 optional int iType;
+	};
+	struct STGetPresaleProdCntRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional map<string,int> mapSellerProdCnt;
+	};
+	
+	
+	struct STStoreInfo
+	{
+		1 optional string strStoreId;
+		2 optional string strStoreName;
+		3 optional string strSellerId;
+	};
+	
+	
+	struct STGetStoreListReq
+	{
+		1 optional int iType;		//0x00 全部
+		2 optional string strSellerId;		//卖家ID
+	};
+	
+	struct STGetStoreListRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<STStoreInfo> vecStore;
+	};
+	
+	enum emSkuOpType
+	{
+		EM_SKU_HIDE = 1,			//SKU隐藏
+		EM_SKU_SHOW = 2,			//sku显示
+	};
+		
+	
+	//SKU操作
+	struct STSkuOpReq
+	{
+		1 optional int iType;
+		2 optional string strSkuId;
+		3 optional string strProdId;
+	};
+	
+	struct STSkuOpRsp
+	{	
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+	};
+	
+	enum emProdCheckRes
+	{
+		E_PROD_CHECK_INVALID = 0,
+		E_PROD_CHECK_VALID = 1,
+	};
+	
+	struct STCheckProdReq
+	{
+		1 optional vector<string> vecProdId;
+	};
+	struct STCheckProdRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional map<string,int> mapProdRes;
+	};
+	
+	enum emCouponRelateType
+	{
+		E_RELATE_TYPE_ON = 0,
+		E_RELATE_TYPE_OFF = 1,
+	};
+	
+	
+	struct STRelateCouponReq
+	{
+		1 optional int iType;				
+		2 optional string strProdId;
+	};
+	
+	struct STRelateCouponRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+	};
+	
+	
+	
+};
+	
+	
+	

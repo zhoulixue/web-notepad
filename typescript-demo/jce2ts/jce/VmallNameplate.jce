@@ -1,0 +1,124 @@
+//测试L5： 64393857:720896
+//正式L5：
+module VmallNameplate
+{
+	enum emCmd
+	{
+		E_GET_NAMEPLATE = 0xfb89,			//获取铭牌
+		E_GET_NAMEPLATE_LIST = 0xfb8a,		//获取用户铭牌列表
+		E_GET_NAMEPLATE_CNT = 0xfb8b,		//获取用户铭牌数
+		E_GET_MAX_NAMEPLATE = 0xfbde,
+		E_GET_ORDER_NAMEPLATE = 0xfbef,		//根据订单号查询铭牌
+	};
+	
+	enum emKeyType
+	{
+		E_PRODUCT_ID = 1,
+	};
+	
+	//获取铭牌
+	struct STGetNameplateReq
+	{
+		1 optional string strOrderId;
+		2 optional int iNum;
+		3 optional int iKeyType;			//emKeyType
+		4 optional string strKey;			//商品ID
+	};
+	
+	struct STGetNameplateRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional int iStartNum;
+		4 optional int iEndNum;
+	};
+	
+	
+	//单条铭牌信息
+	struct STNameplateInfo
+	{
+		1 optional int iNumber;			//编号
+		2 optional string strOrderId;	//对应订单ID
+		3 optional int iTime;			//对应订单时间
+	};
+	
+	//获取铭牌列表
+	struct STGetNameplateListReq
+	{
+		1 optional int iType;			//0x01 上下文翻页
+		2 optional int iPageSize;		//一页数目
+		3 optional string strContext;	//上下文
+		4 optional int iKeyType;			//emKeyType
+		5 optional string strKey;			//商品ID
+	};
+	struct STGetNameplateListRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<STNameplateInfo> vecNameplate;
+		4 optional string strContext;
+		5 optional bool bNext = false;
+		6 optional int iTotalCnt;
+	};
+	
+	//读取铭牌数
+	struct STGetNameplateCntReq
+	{
+		1 optional int iKeyType;
+		2 optional string strKey;
+	};
+	
+	struct STGetNameplateCntRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional int iCnt;
+	};
+	
+	
+	//读取当前最大铭牌号
+	struct STGetMaxNameplateReq
+	{
+		1 optional int iKeyType;
+		2 optional string strKey;
+	};
+	
+	struct STGetMaxNameplateRsp 
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional int iMaxNum;
+	};
+	
+	
+	//订单铭牌记录
+	struct STOrderRecordInfo
+	{
+		1 optional int iStart = 0;
+		2 optional int iEnd = 0;
+	};
+	
+	
+	//根据订单号获取对应的铭牌
+	struct STGetOrderNameplateReq
+	{
+		1 optional int iKeyType;
+		2 optional string strKey;
+		3 optional vector<string> vecOrderId;
+	};
+	struct STGetOrderNameplateRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional map<string,STOrderRecordInfo> mapNameplate;
+	};
+	
+	
+};
+
+
+	
+		
+	
+	
+	

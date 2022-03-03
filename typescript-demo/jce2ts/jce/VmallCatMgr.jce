@@ -1,0 +1,348 @@
+//类目管理
+//测试环境L5：64393857:65536
+
+module VmallCatMgr
+{
+	enum VmallCatRet
+	{
+		E_INPUT_INVALID = 1002,				//无效请求
+		E_SERVER_ERROR = 1003,				//服务器错误
+		E_NO_AUTH = 1004,					//没有权限
+		E_OPERATE_NO_ALLOW = 1005,			//操作不允许，删除仍有商品的分类时使用
+	};
+	
+	enum VmallCatCmd
+	{
+		E_GET_PRI_LIST_CMD = 0xf34f,		//获取一级类目列表
+		E_GET_IP_LIST_CMD = 0xf350,			//获取二级IP列表
+		E_MODIFY_PRI_IP_CMD = 0xf351,		//修改一级IP类目
+		E_MODIFY_SEC_IP_CMD = 0xf352,		//修改二级IP分类
+		E_GET_CAT_LIST_CMD = 0xf353,		//获取二级真实类目列表
+		E_MODIFY_PRI_CAT_CMD = 0xf354,		//修改一级真实类目
+		E_MODIFY_SEC_CAT_CMD = 0xf355,		//修改二级真实类目
+		E_GET_SIM_LIST_CMD = 0xf376, 		//获取简单类目列表
+		E_GET_IP_CMD = 0xf397,				//根据ID批量获取二级IP类目信息
+		E_GET_CAT_CMD = 0xf3a1, 			//根据ID批量获取二级真实类目信息
+		E_GET_COMM_DATA_CMD = 	0xf4af,		//根据ID批量获取名字等公共信息，不区分真实还是IP
+		E_GET_PRI_BY_PAGE_CMD = 0xf4be,		//按页获取一级类目数据
+	};
+	
+	enum emCatType
+	{
+		E_CAT_TYPE_REAL = 1,
+		E_CAT_TYPE_IP = 2,
+	};
+	
+
+	struct STPriIpData
+	{
+		0 optional string strId;			//ID
+		1 optional string strName;			//中文名
+		2 optional string strDesc;			//描述
+		3 optional int iStatus;				//状态
+	};
+		
+	struct STSecIpData
+	{
+		0 optional string strId;
+		1 optional string strName;			//名称
+		2 optional string strPid;			//父类目ID
+		3 optional string strPname;			//父类目名称	
+		4 optional string strCid;			//关联CID
+		5 optional string strLid;			//关联LID
+		6 optional string strHorPic;		//横版图片
+		7 optional string strVerPic;		//竖版图片
+		8 optional string strDesc;			//类目介绍
+		9 optional int iStatus;				//状态
+		
+		//四期新增字段
+		10 optional string strMattingPic;	//抠图
+		11 optional unsigned int uiProdNum;	//商品数
+		12 optional vector<string> vecProd;	//前三商品
+		13 optional unsigned int uiColor;	//底色
+		14 optional vector<unsigned int> vecColor;		//
+		15 optional vector<string> vecSynonym;			//同义词
+		
+		16 optional string strUrlTitle;				//聚合页链接名称
+		17 optional string strUrl;					//聚合页链接
+	};
+	
+	
+	//根据ID批量拉取IP的信息
+	struct STGetIpReq
+	{
+		0 optional vector<string> vecId;
+	};
+	struct STGetIpRsp
+	{
+		0 optional int iErrCode;
+		1 optional string strErrMsg;
+		2 optional map<string,STSecIpData> mapIpData;			//不包含错误ID对应的数据
+	};
+	
+	
+	
+	
+	//根据条件查询IP二级类目
+	struct STGetIpListReq
+	{
+		0 optional string strPid;							//一级类目ID
+		1 optional map<string,string> mapCondition;			//查询条件，用map以后方便扩展
+		2 optional int iPageSize;							//翻页参数
+		4 optional int iPage;								//从1开始
+	};
+	
+	struct STGetIpListRsp
+	{
+		0 optional int iErrCode;
+		1 optional string strErrMsg;
+		2 optional vector<STSecIpData> vecIpData;
+		3 optional STPriIpData stPriIp;
+		4 optional int iTotal;
+	};
+	
+	
+	enum emModifyType
+	{
+		E_ADD = 1,
+		E_MODIFY = 2,
+		E_DELETE = 3,
+	};
+	
+	
+	//修改1级IP分类
+	struct STModifyPriIpReq
+	{
+		0 optional int iType;
+		1 optional STPriIpData stData;
+	};
+	
+	struct STModifyPriIpRsp
+	{
+		0 optional int iErrCode;
+		1 optional string strErrMsg;
+		2 optional string strId;
+	};
+	
+	
+	//修改2级IP分类
+	struct STModifySecIpReq
+	{
+		0 optional int iType;
+		1 optional STSecIpData stData;
+	};
+	
+	struct STModifySecIpRsp
+	{
+		0 optional int iErrCode;
+		1 optional string strErrMsg;
+		2 optional string strId;
+	};
+	//删除ip分类
+	// struct STDelIpReq
+	// {
+		// 0 optional string strId;
+	// };
+	// struct STDelIpRsp
+	// {
+		// 0 optional int iErrCode;
+		// 1 optional string strErrMsg;
+	// };
+	
+	
+	//
+	struct STCatPropData
+	{
+		0 optional string strId;
+		1 optional string strName;
+		2 optional bool bIsSku;
+	};
+	//真实一级类目
+	struct STPriCatData
+	{
+		0 optional string strId;			//ID 
+		1 optional string strName;			//名字
+		2 optional int iStatus;				//状态
+	};
+	//真实二级类目
+	struct STSecCatData
+	{
+		0 optional string strId;						//	ID 
+		1 optional string strName;						//名字
+		2 optional string strPid;						//父类目ID
+		3 optional string strPname;						//父类目名称
+		4 optional string strVerPic;
+		5 optional string strHorPic;
+		6 optional vector<STCatPropData> vecProp;		//类目配置的属性
+		7 optional int iStatus;
+		
+		8 optional unsigned int uiTaxRate = 0;				//税率，单位 万分之一
+		9 optional vector<string> vecSynonym;			//同义词
+	};
+	
+	
+	
+	//根据ID批量拉取真实二级真实类目的信息
+	struct STGetCatReq
+	{
+		0 optional vector<string> vecId;
+	};
+	struct STGetCatRsp
+	{
+		0 optional int iErrCode;
+		1 optional string strErrMsg;
+		2 optional map<string,STSecCatData> mapCatData;			//不包含错误ID对应的数据
+	};
+	
+	
+	
+	//根据条件查询真实二级类目
+	struct STGetCatListReq
+	{
+		0 optional string strPid;							//一级类目ID
+		1 optional map<string,string> mapCondition;			//查询条件，用map以后方便扩展
+		2 optional int iPageSize;							//翻页参数
+		4 optional int iPage;
+	};
+	
+	struct STGetCatListRsp
+	{
+		0 optional int iErrCode;
+		1 optional string strErrMsg;
+		2 optional vector<STSecCatData> vecCatData;
+		3 optional STPriCatData stPriCat;
+		4 optional int iTotal;
+	};
+	
+	//修改真实一级分类
+	struct STModifyPriCatReq
+	{
+		0 optional int iType;
+		1 optional STPriCatData stData;
+	};
+	
+	struct STModifyPriCatRsp
+	{
+		0 optional int iErrCode;
+		1 optional string strErrMsg;
+		2 optional string strId;
+	};
+	
+	struct STModifySecCatReq
+	{
+		0 optional int iType;
+		1 optional STSecCatData stData;
+	};
+	struct STModifySecCatRsp
+	{
+		0 optional int iErrCode;
+		1 optional string strErrMsg;
+		2 optional string strId;
+	};
+	
+	
+	enum emGetPriListType
+	{
+		E_PRI_ALL = 0,		//全部一级类目
+		E_PRI_CAT = 1,		//只获取一级真实类目
+		E_PRI_IP = 2,		//只获取一级IP类目
+	};
+	
+	//获取所有一级类目  0xf34f
+	struct STGetPriListReq
+	{
+		0 optional int iType; //
+	};
+	struct STGetPriListRsp
+	{
+		0 optional int iErrCode;
+		1 optional string strErrMsg;
+		2 optional vector<STPriCatData> vecCatData;
+		3 optional vector<STPriIpData> vecIpData;
+	};
+	
+	
+	
+	//获取一级和二级简单类目列表，用于发布商品页面选择类别
+	struct STSecSimData
+	{
+		0 optional string strId;
+		1 optional string strName;
+		2 optional string strPid;
+		3 optional int iType;
+	};
+	struct STPriSimData
+	{
+		0 optional string strId;
+		1 optional string strName;
+		2 optional int iType;
+		3 optional vector<STSecSimData> vecSecData;
+	};
+	
+	struct STGetSimListReq
+	{
+		0 optional int iType;
+	};
+	struct STGetSimListRsp
+	{
+		0 optional int iErrCode;
+		1 optional string strErrMsg;
+		2 optional vector<STPriSimData> vecPriData;
+	};
+	
+	
+	//查IP和类别名字的公共结构体
+	struct STCommData
+	{
+		0 optional string strId;
+		1 optional string strName;
+		2 optional string strPid;
+	};
+	//批量获取IP或Cat的名字
+	struct STGetCommDataReq
+	{
+		0 optional vector<string> vecId;
+	};
+	//回包
+	struct STGetCommDataRsp
+	{
+		0 optional int iErrCode;
+		1 optional string strErrMsg;
+		3 optional map<string,STCommData> mapId2Data;
+	};
+	
+	//一级类目列表的数据(翻页）
+	struct STCommPriData
+	{	
+		1 optional string strId;
+		2 optional string strName;
+		3 optional unsigned int uiSecNum;
+		4 optional string strDesc;
+	};
+	
+	struct STGetPriByPageReq
+	{
+		1 optional int iType;
+		2 optional int iPageSize;
+		3 optional int iPage;
+	};
+	
+	struct STGetPriByPageRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<STCommPriData> vecData;
+		4 optional int iTotal;
+	};
+	
+	
+	
+};
+
+
+
+
+	
+	
+		
+

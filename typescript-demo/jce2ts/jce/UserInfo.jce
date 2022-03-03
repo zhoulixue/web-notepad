@@ -1,0 +1,336 @@
+#include "VideoMallComm.jce"
+
+/*
+   正式环境L5:64363521:131073 
+   测试环境L5:64363521:131072
+ */
+
+module VMallUser
+{
+	// 包命令类型
+    enum emUserInfoCmd
+	{
+		EM_ADD_BASEINFO_REQ = 0xf24f,              // 新增基本信息
+		EM_MOD_BASEINFO_REQ = 0xf250,              // 修改基本信息
+		EM_GET_BASEINFO_REQ = 0xf251,              // 查询基本信息
+		EM_READ_USER_IDENTITY_REQ = 0xf568,        // 读取用户身份信息
+
+		EM_ADD_DELIADDR_REQ = 0xf252,              // 新增收货地址
+		EM_DEL_DELIADDR_REQ = 0xf253,              // 删除收货地址
+		EM_GET_DELIADDR_REQ = 0xf254,              // 查询收货地址
+		EM_MOD_DELIADDR_REQ = 0xf255,              // 修改收货地址
+
+	    EM_GET_PERSONAL_CENTER_REQ = 0xf33c,       // 获取用户个人中心	
+		EM_READ_BUY_RECORD_REQ = 0xf35b,           // 读购买记录
+		                                           // 0xf3ea(测试)，0xf35a写购买记录
+
+		EM_CHECK_PRESELL_REQ = 0xf4a8,             // 检查用户是否预约
+		EM_ADD_PRESELL_REQ = 0xf4a9,               // 新增或取消预约
+		EM_READ_PRESELL_NUM = 0xfe78,              // 查询商品预约数
+
+		EM_SET_DEFDELIADDR_REQ = 0xf291,           // 设为默认收货地址
+	};
+
+	enum emErrCode
+	{
+		RT_GET_BUY_NUM_ERROR = 2001,                // 读取购买(未付款)数量失败
+		RT_WRITE_BUY_NUM_ERROR = 2002,              // 写购买(未付款)数量失败
+		RT_QUERY_READ_ERROR = 2003,                 // 读DB失败
+		RT_QUERY_WRITE_ERROR = 2004,                // 写DB失败
+		RT_CHECK_INVALID = 2005,                    // 检查失败 
+		RT_READ_PRESELL_INFO_ERROR = 2006,          // 读预约信息失败
+		RT_WRITE_PRESELL_INFO_ERROR = 2007,         // 写预约信息失败
+		RT_ADD_TIMER_TASK_ERROR = 2008,             // 新增定时任务失败
+		RT_DEL_TIMER_TASK_ERROR = 2009,             // 删除定时任务失败
+		RT_PARSE_MSG_ERROR = 2010,                  // 解析消息失败
+		RT_NOTIFY_USER_ERROR = 2011,                // 触达用户失败
+		RT_READ_ADDR_INFO_ERROR = 2012,
+		RT_WRITE_ADDR_INFO_ERROR = 2013,
+		RT_EARLY_SEND_RSP_PKG_ERROR = 2014,
+		RT_READ_DB_ADDR_INFO_ERROR = 2015,
+		RT_READ_PRESELL_NUM_ERROR = 2016,
+		RT_ADD_PRESELL_NUM_ERROR = 2017,
+		RT_DEL_PRESELL_NUM_ERROR = 2018,
+	};
+
+	// 用户基本信息
+	struct STUserBaseInfo
+	{
+		1 require string strUserId;   // 用户ID，为视频的vuid 
+		2 optional string strPhone;    // 绑定的手机号
+		3 optional string strMail;     // 绑定的邮箱
+	};
+
+	// 收货地址详情
+	struct STDeliAddr
+	{
+		1 require long ulDeliAddrId;               // 地址ID
+		2 optional string strUserId;               // 用户ID
+		3 require VideoMall::STPostInfo stPostInfo;           // 邮购信息
+		4 optional string strCreateTime;           // 创建时间
+		5 optional string strModifyTime;           // 修改时间
+		6 require bool bIsDefault;                 // 是否默认
+	};
+
+    // 用户财富信息
+	struct STUserWealth
+	{
+		1 require long ulVBNum;                 // V币数量
+		2 require long ulCouponNum;             // 礼品券数量
+	}; 
+
+	// 用户购买记录
+	struct STBuyRecord
+	{
+		1 require string strSkuId;                // 库存ID        
+		2 require unsigned int uiBuyNum;                    // 购买数量
+	};
+
+    enum emReadBuyRecordType
+	{
+		EM_ALL_SKU_TYPE = 1,                       // 所有商品的购买记录
+		EM_SPECIFIED_SKU_TYPE = 2,                 // 指定商品的购买记录
+	};
+
+    // 身份种类 
+	enum emUserIdentityId
+	{
+		EM_VIP_TYPE = 1,         // VIP
+		EM_DOKI_TYPE = 2,        // Doki
+		EM_IWAN_TYPE = 3,        // iwan
+		EM_MALL_TYPE = 4,        // 商城
+	};
+
+	// 身份的状态
+	enum emIdentityStatus
+	{
+		EM_IDENTITY_VALID = 1,             // 身份有效
+		EM_IDENTITY_EXPIRED = 2,           // 身份过期
+		EM_IDENTITY_INVALID = 3,           // 无身份
+	};
+
+	struct STUserIdentityInfo
+	{
+		1 require int iIdentityId;            // 取自emUserIdentityId
+		2 optional int iLevel;          // 等级
+		3 optional map<string, string> mapExtraInfo;  // 其他信息, 查商城用户等级信息从emOrderCnt中取
+		4 optional int iStatus;              // 取自emIdentityStatus 
+	};
+
+    // 下单量
+	enum emOrderCnt
+	{
+		EM_ALL_ORDER_CNT = 1,                 // 历史总下单量
+		EM_MONTH_ORDER_CNT = 2,               // 月下单量
+		EM_QUARTER_ORDER_CNT = 3,             // 季度下单量
+		EM_HALF_YEAR_ORDER_CNT = 4,           // 半年下单量
+		EM_YEAR_ORDER_CNT = 5,                // 年下单量
+	};
+
+    // 读用户身份请求和回应包
+	struct STReadUserIdentityReq
+	{
+		1 require vector<int> vecIdentityId;           // 数组中的值取自emUserIdentityId
+	};
+
+	struct STReadUserIdentityRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<STUserIdentityInfo> vecIdentityInfo; 
+	};
+
+	// 读用户购买记录
+	struct STReadBuyRecordReq
+	{
+		1 require emReadBuyRecordType eReadType;
+		2 optional vector<string> vecSkuId;
+	};
+
+	struct STReadBuyRecordRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 require map<string, STBuyRecord> mapBuyRecord;
+	};
+
+    // 获取用户个人中心请求及回应包
+	struct STGetPersonalCenterReq
+	{
+		1 require string strUserId;
+	};
+	struct STVipInfo
+	{
+		1 require int iLevel;
+	};
+
+	struct STGetPersonalCenterRsp
+	{
+		1 require int iErrCode;
+		2 require string strErrMsg;
+		3 require string strPortraitUrl;                                           // 用户头像
+		4 require string strNickName;                                              // 昵称
+		5 require STUserWealth stUserWealth;                                       // 用户财富
+		6 require VideoMall::STUndealOrderNumInfo stUndealOrderNumInfo;            // 未完成订单数 
+		7 optional bool bIsVip;
+		8 optional STVipInfo stVipInfo;          // 腾讯视频VIP信息
+	};
+
+    // 新增基本信息请求及回应包
+	struct STAddBaseInfoReq
+	{
+	    1 require STUserBaseInfo stUserBaseInfo;
+	};
+
+	struct STAddBaseInfoRsp
+	{
+		1 require int iErrCode;
+		2 require string strErrMsg;
+	};
+
+	// 获取基本信息请求及回应包
+	struct STGetBaseInfoReq
+	{
+		1 optional string strUserId;
+	};
+
+	struct STGetBaseInfoRsp
+	{
+		1 require int iErrCode;
+		2 require string strErrMsg;
+		3 require STUserBaseInfo stUserBaseInfo;
+	};
+
+	// 修改基本信息请求及回应包
+	struct STModBaseInfoReq
+	{
+		1 require STUserBaseInfo stUserBaseInfo;
+	};
+
+	struct STModBaseInfoRsp
+	{
+		1 require int iErrCode;
+		2 require string strErrMsg;
+	};
+
+	// 新增收货地址请求及回应包
+	struct STAddDeliAddrReq
+	{
+		1 require STDeliAddr stDeliAddr;
+	};
+
+    struct STAddDeliAddrRsp
+	{
+		1 require int iErrCode;
+		2 require string strErrMsg;
+		3 require long ulDeliAddrId;          // 返回该地址的ID
+	};
+
+	// 删除收货地址(支持批量)请求及回应包
+	struct STDelDeliAddrReq
+	{
+		1 require vector<long> vecDeliAddrId;
+	};
+
+	struct STDelDeliAddrRsp
+	{
+		1 require int iErrCode;
+		2 require string strErrMsg;
+	};
+
+
+	// 获取收货地址请求及回应包
+	struct STGetDeliAddrReq
+	{
+		1 optional string strUserId;
+		2 optional long ddwDeliAddrId;
+	};
+
+	struct STGetDeliAddrRsp
+	{
+		1 require int iErrCode;
+		2 require string strErrMsg;
+		3 require vector<STDeliAddr> vecDeliAddr;
+	};
+
+	struct STAddrCacheInfo
+	{
+		1 optional string strUserId;
+		2 optional vector<STDeliAddr> vecDeliAddr;
+		3 optional int iCacheTime;
+	};
+
+	// 修改收货地址请求及回应包
+	struct STModDeliAddrReq
+	{
+		1 require STDeliAddr stDeliAddr;
+	};
+
+	struct STModDeliAddrRsp
+	{
+		1 require int iErrCode;
+		2 require string strErrMsg;
+	};
+
+	// 设为默认收货地址请求及回应包
+	struct STSetDefDeliAddrReq
+	{
+		1 require long ulDeliAddrId; 
+	};
+
+	struct STSetDefDeliAddrRsp
+	{
+		1 require int iErrCode;
+		2 require string strErrMsg;
+	};
+
+	struct STPresellInfo
+	{
+		1 optional string strUserId;         // 用户ID, 前端传来的包存在包头，后台传来的包存在此处
+		2 require string strProductId;       // 商品ID
+		3 require string strProductName;     // 商品名
+		4 require string strOnsaleTime;      // 开售时间
+		5 optional string strPhone;          // 预留电话
+		6 optional string strMsgId;          // 提交定时系统成功时的返回
+	};
+
+    // 检查是否预约请求及回应包
+	struct STCheckPresellReq
+	{
+		1 require string strProductId;
+		2 require string strOnsaleTime;
+	};
+
+	struct STCheckPresellRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 require bool bPresell;             // 用户是否预约
+		4 optional string strPhone;          // 用户关联的电话号码
+	};
+
+	// 增加预购、删除预约请求及回应包
+	struct STAddPresellReq
+	{
+		1 require int iType;                     // 1:新增 2:删除
+		2 require STPresellInfo stPresellInfo;   
+	};
+
+	struct STAddPresellRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional string strPresellInfo;        // 预售信息
+	};
+
+	struct STReadPresellNumReq
+	{
+		1 require vector<string> vecProdId;
+	};
+	struct STReadPresellNumRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional map<string, unsigned int> mapProd2Num;
+	};
+};

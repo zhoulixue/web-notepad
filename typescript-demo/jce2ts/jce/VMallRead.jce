@@ -1,0 +1,538 @@
+#include "VideoMallComm.jce"
+
+//以下为C端使用协议，商品读模块
+
+module VMallRead
+{
+	enum emVMallReadCmd
+	{
+		EM_READ_BASE_INFO = 0xf274,//0x1f21,
+		EM_READ_INFO = 0xf273,//0x1f22,
+		EM_READ_PRODUCT_SKU = 0xf276,//0x1f23,
+		EM_READ_SKU = 0xf275,//0x1f24,
+		EM_READ_VIEW_CAT = 0xf2ad,
+		EM_READ_ACT_PROD = 0xf4a7,
+		EM_READ_SEARCH_INFO = 0xf57f,
+		EM_READ_INFO_ADMIN = 0xf66b,
+		EM_READ_PROD_LIST_INFO = 0xf7f2,
+		EM_READ_PROD_STATIC_INFO = 0xf96a,
+		
+	};
+	
+	struct STCatInfo
+	{
+		1 require string strCatId;
+		2 require string strCatName;
+	};
+	
+	struct STGetViewCatReq
+	{
+		1 optional string strType;           //"0"读取全部
+	};
+	struct STGetViewCatRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<STCatInfo> vecCat;
+	};
+	
+	
+	
+	struct STIpData
+	{
+		0 optional string strIpId;
+		1 optional string strIpName;
+		2 optional string strPriIpId;
+	};
+	
+	struct STLabelInfo
+	{
+		0 optional string strLabelId;       //标签ID
+		1 optional string strLabelName;		//标签名
+		2 optional string strLabelDesc;		//标签具体描述
+	};
+	
+	struct STUserDiscountInfo
+	{
+		1 optional int iId;					//对应VideoMallComm.jce里emPricePrivilege
+		2 optional unsigned int uiCash;
+		3 optional bool bIsMatch;
+	};
+	struct STSkuQuanInfo
+	{
+		1 optional string strSkuId;
+		2 optional string strBatchId;
+		3 optional int iQuantity;
+		4 optional unsigned int uiPureCashPrice;
+		5 optional string strActId;					//用于SKU计价的活动
+	};
+	
+	//商品基本信息，列表页展示
+	struct STProductBaseInfo   
+	{
+		1 require string strProductId;			//商品ID
+		2 require string strTitle;				//商品名
+		3 require string strCategoryId;			//商品类别
+		4 require string strViewCategoryId;		//外显类别
+		5 require string strImgUrl;				//图片
+		6 require string strSellerId;       	//卖家ID
+		7 optional unsigned int uiVCoinPrice;	//V币价格
+		8 optional unsigned int uiCashPrice;	//现金价格
+		9 optional unsigned int uiOriPrice;		//原价
+		10 optional unsigned int uiPureVCoinPrice;	//纯V币价格
+		11 optional unsigned int uiPureCashPrice;	//纯现金价格，单位：分
+		12 optional vector<STLabelInfo> vecLabel;			//商品标签
+		13 optional int iSaleType;							//0 正常 1 预售
+		14 optional int iPreSaleTime;						//预售发货时间
+		15 optional vector<string> vecIpList;				//IP列表（废弃）
+		16 optional unsigned int uiExpressFee;				//邮费（废弃）
+		
+		17 optional string strMattingImg;					//抠图
+		
+		//三期字段
+		18 optional int iSaleStartTime;						//开售时间
+		19 optional unsigned int uiRealPrice;				//实际显示价格，可能是特权价格
+		20 optional vector<int> vecPrivilegeId;				//特权ID，用于计算特权价格的特权，为空，则表示没有特权，目前有的话只有一个值，就是VIP特权(废弃）
+		21 optional vector<STIpData> vecIpName;				//IP列表
+		
+		//四期字段
+		22 optional vector<STUserDiscountInfo> vecDiscount;		//优惠列表
+		
+		//五期字段
+		23 optional vector<VideoMall::STActDiscountInfo> vecAct;	//活动优惠信息，这里有数据，说明使用的是活动价格，会给出活动简称和活动ID，为空，则表示没有使用活动价
+		
+		24 optional unsigned int uiExpectPrice;							//期望价格
+		25 optional vector<VideoMall::STPriceTag> vecRealPriceTag;		//最终价格标签
+		26 optional vector<VideoMall::STPriceTag> vecExpectPriceTag;	//期望价格标签
+		27 optional unsigned int uiSpreadPrice;				//推广价格
+		28 optional vector<VideoMall::STPriceTag> vecSpreadPriceTag;	//推广价格标签
+		
+		29 optional unsigned int uiViewSale;							//外显销量
+		
+		30 optional int iQuantity;										//可卖库存
+		
+		31 optional string strShortTitle;								//商品简称
+		32 optional vector<string> vecSearchWord;						//商品关键词
+		
+		33 optional unsigned int uiPresaleDiscount;						//预售折扣，前端不关心
+		
+		35 optional vector<STSkuQuanInfo> vecSku;						//SKU及库存数据
+		
+		36 optional string strRepSkuId;									//代表SKUId
+		
+		37 optional unsigned int uiProdSale;							//商品总销量，包括锁定ID对应的销量
+		
+		38 optional string strScript;									//角标
+		
+		39 optional int iTotalQuan;										//商品总剩余库存，包括锁定的库存
+		
+		40 optional VideoMall::STCredictInfo stCredictConf;								//商品积分配置
+		
+		41 optional vector<VideoMall::STScriptInfo> vecScript;			//商品角标
+		
+		42 optional string strPriCatId;									//商品一级类目ID
+		
+		43 optional vector<VideoMall::STScriptInfo> vecActScript;		//活动角标
+		
+		44 optional int iExpTempId;										//商品邮费模板
+		
+		45 optional string strProdUrl;									//商详链接
+		
+		46 optional VideoMall::STDepositInfo stDeposit;					//定金信息
+		47 optional int iPresaleType;									//预售类型
+	};
+
+	
+	struct STExpTempInfo
+	{
+		0 optional int iId;
+		1 optional string strDesc;
+	};
+	
+	struct STRePolicyInfo
+	{
+		0 optional int iId;
+		1 optional string strDesc;
+	};
+	
+	struct STSkuSearchInfo
+	{
+		1 optional string strSkuId;
+	};
+	
+	//用于搜索的商品数据
+	struct STProdSearchInfo
+	{
+		1 optional string strProductId;						//商品ID
+		2 optional string strTitle;							//商品名
+		3 optional string strCategoryId;					//二级类目ID
+		
+		8 optional unsigned int uiExpressFee;				//邮费
+		9 optional bool bIsExpressFree;						//是否免邮
+		10 optional string strSellerId;						//卖家ID
+		11 optional int iStatus;							//商品状态
+		12 optional unsigned int uiVCoinPrice;				//组合价中的V币价格
+		13 optional unsigned int uiCashPrice;				//组合价中的现金价格
+		14 optional unsigned int uiOriPrice;				//原价
+		15 optional unsigned int uiPureVCoinPrice;			//纯V价格，单位：分
+		16 optional unsigned int uiPureCashPrice;			//纯现金价格，单位：分
+		17 optional unsigned int uiSale;					//销量
+		18 optional int iQuantity;							//库存
+		19 optional vector<VideoMall::STPropInfo> vecProps;   		//商品属性列表
+		
+		21 optional vector<STLabelInfo> vecLabel;					//商品的标签，如 “正品”
+		
+		
+		//二期新增字段
+		23 optional vector<string> vecIpList;						//IP列表
+		24 optional int iSaleType;									//0 正常 1 预售
+		25 optional int iPreSaleTime;								//预售发货时间
+		
+		28 optional STLabelInfo stExpInfo;					//邮费模板信息
+		29 optional STLabelInfo stRePolicyInfo;				//退换货策略
+		30 optional unsigned int uiCash;					//V币优惠可抵扣的现金
+		31 optional unsigned int uiVCoin;					//V币优惠的V币数
+		
+		//三期新增字段
+		32 optional int iSaleStartTime;						//开售时间
+		33 optional vector<STUserDiscountInfo> vecDiscount;		//优惠列表
+
+		36 optional vector<STIpData> vecIpName;					//IP名字
+		
+		37 optional string strPriCat;							//一级类目ID
+		
+		38 optional unsigned int uiViewSale;							//外显销量
+		
+		39 optional vector<STSkuSearchInfo> vecSku;				//Sku信息
+		
+		40 optional int iOnSaleTime;
+		
+		41 optional string strCatName;							//二级类目名
+		42 optional string strPriCatName;						//一级类目名
+		43 optional int iTestType;								//沙箱标识，0 正式商品  1沙箱商品
+		
+		44 optional string strMattingImg;						//商品抠图
+		45 optional vector<string> vecSearchWord;				//关键词
+		46 optional unsigned int uiVipDiscount;					//VIP 抵扣
+		
+		47 optional VideoMall::STCredictInfo stCredict;					//VIP 积分设置
+		
+		48 optional int iRelateStatus;							//商品优惠券关联，0 关联，1 不关联
+		
+		49 optional string strSuppler;							//供货商ID
+		
+		50 optional int iPresaleType;
+		51 optional VideoMall::STDepositInfo stDeposit;			//定金
+	};
+	
+	struct STReadResearchInfoReq
+	{
+		1 optional string strId;
+		2 optional int iType;			//0 -- 商品ID ，1 -- SKUID
+	};
+	struct STReadResearchInfoRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional STProdSearchInfo stInfo;
+	};
+	
+	
+	//商品列表类目信息
+	struct STProdCatInfo
+	{
+		1 optional string strPriId;
+		2 optional string strSecId;
+		3 optional string strPriName;
+		4 optional string strSecName;
+	};
+	//商品列表折扣信息	
+	struct STProdDiscountInfo
+	{
+		1 optional unsigned int uiVCoin;
+		2 optional unsigned int uiVip;
+		3 optional unsigned int uiFresh;
+		5 optional unsigned int uiAct;
+		6 optional string strActId;
+		7 optional string strActName;
+		8 optional unsigned int uiPresale;			//预售折扣
+		9 optional VideoMall::STCredictInfo stCredict;		//积分抵扣
+	};
+	//商品列表预售信息
+	struct STProdPresaleInfo
+	{
+		1 optional int iPresaleType;
+		2 optional int iPresaleDiscount;
+		3 optional int iSaleStartTime;			//预售开始时间
+		4 optional int iDeliveryTime;			//发货时间
+        5 optional int iPresaleSubType;
+		6 optional VideoMall::STDepositInfo stDeposit;			//定金
+	};
+	
+	enum EmSKuStatus
+	{
+		E_SKU_STATUS_NORMAL = 1,				//正常
+		E_SKU_STATUS_UNSOLD = 2,				//商品未上架
+		E_SKU_STATUS_HIDDEN = 3,				//隐藏
+	};
+	
+	//商品列表SKU信息
+	struct STProdSkuInfo
+	{
+		1 optional string strSkuId;
+		2 optional map<string,string> mapProp;		//规格
+		3 optional string strImgUrl;
+		4 optional unsigned int uiPureCashPrice;
+		5 optional unsigned int uiSale;
+		6 optional int iQuantity;
+		7 optional int iRealQuantity;
+		8 optional unsigned int uiSupplyPrice;		//供货价
+		
+		9 optional int iTotalQuan;					//总剩余库存（普通 + 锁定)
+		10 optional int iLockQuan;					//锁定总库存
+		11 optional unsigned int uiTotalSale;		//总销量（普通+锁定）
+		12 optional unsigned int uiLockSale;		//锁定总销量
+		13 optional int iLockHold;					//锁定预扣库存
+		
+		14 optional int iStatus;					//SKu状态
+		15 optional unsigned int uiPayNum;			//SKU历史销量
+		
+	};
+	//商品列表信息
+	struct STProdListInfo
+	{
+		1 require string strProductId;						//商品ID
+		2 require string strTitle;							//商品名
+		3 optional vector<string> vecImgUrls;				//商品图片列表
+		4 optional int iStatus;
+		5 optional STProdCatInfo stCat;
+		6 optional vector<STProdCatInfo> vecIp;
+		7 optional unsigned int uiSale;
+		8 optional int iQuantity;
+		9 optional int iRealQuantity;
+		10 optional int iOnSaleTime;
+		11 optional int iOffSaleTime;
+		12 optional unsigned int uiPureCashPrice;			//商品基础价
+		13 optional STProdDiscountInfo stDiscount;			//折扣信息
+		14 optional STProdPresaleInfo stPresale;			//预售信息
+		15 optional vector<STProdSkuInfo> vecSku;			//SKU 信息
+		
+		16 optional int iTotalQuan;					//总剩余库存（普通 + 锁定)
+		17 optional int iLockQuan;					//锁定总库存
+		18 optional unsigned int uiTotalSale;		//总销量（普通+锁定）
+		19 optional unsigned int uiLockSale;		//锁定总销量
+		20 optional int iLockHold;					//锁定预扣库存
+		
+		21 optional unsigned int uiPayNum;			//历史销量
+		
+		22 optional string strProdCus;				//商品定制信息
+	};
+	
+	
+	struct STGetProdListReq
+	{
+		1 optional vector<string> vecId;
+	};
+	struct STGetProdListRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional map<string,STProdListInfo> mapProd;
+	};
+	
+	enum emPresaleStatus
+	{
+		E_PRESALE_TYPE_FULL = 0,
+		E_PRESALE_TYPE_DEPOSIT = 1,
+	};
+	
+	struct STProductInfo
+	{
+		1 require string strProductId;						//商品ID
+		2 require string strTitle;							//商品名
+		3 require string strCategoryId;						//类别ID
+		4 optional string strViewCategoryId;					//外显类别ID
+		5 optional vector<string> vecImgUrls;				//商品图片列表
+		6 optional string strContent;						//商品详情描述，html结构体
+		7 optional vector<string> vecImgDesc;               //商品详情图片
+		8 optional unsigned int uiExpressFee;				//邮费
+		9 optional bool bIsExpressFree;						//是否免邮
+		10 optional string strSellerId;						//卖家ID
+		11 optional int iStatus;								//商品状态
+		12 optional unsigned int uiVCoinPrice;				//组合价中的V币价格
+		13 optional unsigned int uiCashPrice;				//组合价中的现金价格
+		14 optional unsigned int uiOriPrice;					//原价
+		15 optional unsigned int uiPureVCoinPrice;			//纯V价格，单位：分
+		16 optional unsigned int uiPureCashPrice;			//纯现金价格，单位：分
+		17 optional unsigned int uiSale;						//销量
+		18 optional int iQuantity;							//库存
+		19 optional vector<VideoMall::STPropInfo> vecProps;   		//商品属性列表
+		20 optional vector<VideoMall::STProductSkuInfo> vecSkus; 	//sku 列表
+		21 optional vector<STLabelInfo> vecLabel;					//商品的标签，如 “正品”
+		22 optional string strTargetId;                             //评论使用
+		
+		//二期新增字段
+		23 optional vector<string> vecIpList;						//IP列表
+		24 optional int iSaleType;									//0 正常 1 预售
+		25 optional int iPreSaleTime;								//预售发货时间
+		26 optional string strMattingImg;						//产品抠图
+		27 optional int iSellerType;							//商家类型 0 普通 1 自营
+		28 optional STLabelInfo stExpInfo;					//邮费模板信息
+		29 optional STLabelInfo stRePolicyInfo;				//退换货策略
+		30 optional unsigned int uiCash;					//V币优惠可抵扣的现金
+		31 optional unsigned int uiVCoin;					//V币优惠的V币数
+		
+		//三期新增字段
+		32 optional int iSaleStartTime;						//开售时间
+		33 optional vector<STUserDiscountInfo> vecDiscount;		//优惠列表
+		34 optional unsigned int uiRealPrice;					//目前商品的实际价格
+		35 optional vector<int> vecPrivilegeId;					//目前使用的特权ID
+		36 optional vector<STIpData> vecIpName;					//IP名字
+		
+		//五期新增字段
+		37 optional vector<VideoMall::STActDiscountInfo> vecAct;	//活动信息，表示uiRealPrice是否用活动价计算
+		
+		
+		38 optional unsigned int uiExpectPrice;							//期望价格
+		39 optional vector<VideoMall::STPriceTag> vecRealPriceTag;		//最终价格标签
+		40 optional vector<VideoMall::STPriceTag> vecExpectPriceTag;	//期望价格标签
+		41 optional unsigned int uiSpreadPrice;				//推广价格
+		42 optional vector<VideoMall::STPriceTag> vecSpreadPriceTag;	//推广价格标签
+		
+		43 optional unsigned int uiViewSale;							//外显销量
+		
+		44 optional string strShortTitle;								//商品简称
+		45 optional vector<string> vecSearchWord;						//商品搜索关键字
+		
+		46 optional int iOnSaleTime;									//上架时间
+		47 optional int iRealQuantity;									//商品总库存
+		48 optional unsigned int uiPresaleDiscount;						//预售折扣，前端不关心
+		
+		49 optional string strScript;									//角标
+		50 optional VideoMall::STCredictInfo strCredictConf;			//积分配置
+		
+		51 optional vector<VideoMall::STScriptInfo> vecScript;			//商品角标
+		52 optional vector<VideoMall::STScriptInfo> vecActScript;		//活动角标
+		
+		53 optional string strProdCus;									//商品定制信息
+		
+		54 optional int iPresaleType;									//预售类型， 0 -- 全额， 1 -- 定金
+		55 optional VideoMall::STDepositInfo stDeposit;					//商品定金信息
+        
+        56 optional unsigned int uiCrowdNum;                            //众筹数量
+
+		57 optional VideoMall::STPddGoldsConf strPddGoldsConf;						//片多多金币数据
+	};
+	
+	
+	
+	//请求商品简要信息时，需要带上商品ID和计价要用的活动ID，秒杀里面使用
+	struct STProdActInfo
+	{
+		1 optional string strProdId;
+		2 optional string strActId;
+	};
+	
+	
+	//读商品简要信息，支持批量
+	struct STReadBaseInfoReq
+	{
+		1 require vector<string> vecProductIds;
+		2 optional string strActId;
+		3 optional string strChannelId;
+	};
+	
+	struct STReadBaseInfoRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional map<string,STProductBaseInfo> mapId2Info;
+	};
+	
+	//读商品详细信息
+	struct STReadInfoReq
+	{
+		
+		1 require string strProductId;
+		2 optional string strActId;				//线下活动使用
+		3 optional string strChannelId;
+		
+	};
+	
+	struct STReadInfoRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional STProductInfo stInfo;
+	};
+	
+	//根据商品ID获取所有SKU信息
+	struct STProductSkuReq
+	{
+		1 require string strProductId;
+	};
+	struct STProductSkuRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<VideoMall::STProductSkuInfo> vecSkus;
+	};
+	
+	//查询SKU时秒杀场景下需要带活动ID
+	struct STSkuActReqInfo
+	{
+		1 optional string strSkuId;
+		2 optional string strActId;
+		3 optional string strChannelId;
+	};
+	
+	
+	
+	//根据SKUID获取SKU信息
+	struct STSkuReq
+	{
+		1 require vector<string> vecSkuIds;
+		2 optional vector<STSkuActReqInfo> vecSkuWithAct;
+	};
+	
+	struct STSkuRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional map<string,VideoMall::STProductSkuInfo> mapId2Info;
+	};
+	
+	struct STIpCatInfo
+	{
+		1 optional string strPriId;
+		2 optional string strPriName;
+		3 optional string strSecId;
+		4 optional string strSecName;
+	};
+	
+	struct STActProdDBInfo
+	{
+		1 optional string strId;
+		2 optional string strImg;
+		3 optional string strTitle;
+		4 optional int iStatus;
+		5 optional vector<STIpCatInfo> vecIpInfo;
+		6 optional STIpCatInfo stCatInfo;
+	};
+	
+	//直接从DB读取商品基本信息
+	struct STReadActProdInfoReq
+	{
+		1 require vector<string> vecProductIds;
+	};
+	struct STReadActProdInfoRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional map<string,STActProdDBInfo> mapId2Info;
+	};
+	
+	
+	
+
+};

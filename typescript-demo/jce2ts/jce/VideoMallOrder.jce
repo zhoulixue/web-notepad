@@ -1,0 +1,939 @@
+#include "VideoMallComm.jce"
+
+module VideoMall{
+
+	/*
+
+	重要：依赖的文件在其他路径，需要做软连接
+	ln -s ../store_comm/VideoMallComm.jce .
+	ln -s ../vmall_express/VmallExpress.jce .
+	读测试:
+	IP:10.49.123.228:23575
+	L5:599873:2424832
+
+	写测试
+	IP:10.49.123.228:23574
+	L5:599873:2359296
+	*/
+
+enum CMD
+{
+	PRE_PAY_ORDER = 0xf1fb,                        //预下单
+	MODIFY_PAY_STATUS = 0xf205,                //修改支付信息
+	MODIFY_ORDER_STATUS = 0xf20d,           //修改物流订单信息
+	MODIFY_PACKAGE_STATUS = 0xff3a, 		//修改包裹订单信息
+	MODIFY_REFUND_ORDER = 0xf216,          //修改退款订单信息
+	CREATE_REFUND_ORDER_S = 0x5ca7,	      //创建退款订单信息（不鉴权）
+	DIVISION_ORDER = 0xf2a2, 					//拆单服务
+    ORDER_STATUS_TRANS = 0xf35a,            //物流订单状态中转
+	ORDER_STATUS_TRANS_TEST = 0xf3ea, 		//订单操作中转（测试环境）
+    READ_PAY_ORDER = 0xf224,                     //查支付订单详情
+	CHECK_PAY_ORDER = 0xf707, 					 //检查支付订单详情（不鉴权，慎用）
+	READ_PACKAGE_LIST= 0xff3b, 				//查询物流单下包裹单列表
+	READ_ORDER_INFO_S = 0xfc63, 				  //后台查询物流订单详情（不鉴权）
+	READ_ORDER_INFO_B = 0xf21c,                   //商家查询物流订单详情
+	READ_ORDER_INFO = 0xf400, 					//查询物流订单详情
+	READ_PACKAGE_INFO_S = 0x5c93, 				  //后台查询包裹订单详情（不鉴权，兼容订单）
+	READ_USER_ORDER_LIST = 0xf228,              //查用户物流订单列表
+	READ_USER_REFUND_LIST = 0xf3f3, 			//查用户退货订单列表
+    READ_REFUND_ORDER = 0xf221,            		//查退款订单详情
+	READ_REFUND_ORDER_U = 0xffa0, 				//用户查退款订单详情（C端）
+	READ_REFUND_ORDER_S = 0xfdb0, 				 //查询退款单详情（不鉴权）
+    READ_SELLER_ORDER_LIST = 0xf231,           //查商户物流订单列表
+	READ_SELLER_ORDER_LIST_S = 0xfe82,           //查商户物流订单列表（不鉴权）
+	READ_DELIVERY_ORDER_LIST_S = 0x5c74,  		 //查询待发货列表（不鉴权）
+	READ_LOG_FLOW = 0xf2a4, 					//用户查询订单操作历史
+	READ_LOG_FLOW_B = 0xf7f9, 					//商家查询订单操作历史
+	READ_LOG_FLOW_S = 0x5e19, 					//后台查询订单操作历史（不鉴权）
+	READ_UNDEAL_ORDER_NUM = 0xf33e,         //读取未处理订单数(红点)
+	READ_UNDEAL_ORDER_NUM_B = 0xf348,         //商家读取未处理订单数(红点)
+	READ_LAST_EXPRESS_INFO = 0xf422, 		  //获取用户最近快递信息
+	READ_SELLER_SEARCH_LIST = 0xf626,       //商家搜索物流订单详情
+	READ_PAY_EXPRESS_LIST = 0xf965, 				//查询支付单物流列表
+	AUTO_DELIVERY_NOTIFY = 0xfc43, 					//自动发货通知
+};
+
+enum RET_CODE
+{
+	ORT_UNKNOW_ERROR = 1000,
+	ORT_ERR_PACKET = 1001,
+	ORT_NEED_LOGIN = 1002,
+	ORT_SERVER_ERROR = 1003,
+	ORT_ENCODE_RSP_PKG_FAIL = 1004,
+	ORT_GET_ORDER_ID_FAIL = 1005,
+	ORT_PACKAGE_TOO_MUCH = 1006,
+	ORT_GOODS_TYPE_ERROR = 1007,
+	ORT_QUERY_DB_ERROR = 1008,
+	ORT_OPERATION_DENY = 1009,
+	ORT_UPDATE_DB_ERROR = 1010,
+	ORT_INSERT_DB_ERROR = 1011,
+	ORT_QUERY_NO_DATA = 1012,
+	ORT_INPUT_INVALID = 1013,
+	ORT_REQ_FREQUENCE = 1014,
+	ORT_STORE_LACK = 1016,
+};
+
+enum O_LOGIC_CODE
+{
+	ORT_REPEAT_LOGIC = 1000,
+};
+
+enum emFlowType
+{
+    LOG_TYPE_EXPRESS = 1, 		//物流订单
+    LOG_TYPE_REFUND = 2, 		//退款订单
+	LOG_TYPE_PAY  	= 3, 		//支付订单
+};
+
+//退款类型
+enum emRefundType
+{
+	EM_RF_TYPE_GB_PAY = 1, 							//仅退款
+	EM_RF_TYPE_GB_PAY_PRODUCT = 2,					//退货退款
+	EM_RF_TYPE_CHANGE = 3, 							//换货
+};
+
+enum emReStoreType
+{
+    EM_RS_TYPE_DEFAULT = 0,                         //不特殊指定，依据退款类型
+    EM_RS_TYPE_RESTORE = 1, 							//退库存
+	EM_RS_TYPE_REJECT = 2,			                    //不退库存
+};
+
+//退款方式
+enum E_REFUND_METHOD
+{
+	EM_REFUND_SRC = 0, 							        //原路返回
+	EM_REFUND_TRANS= 1,			//赔付退款
+};
+
+
+//退款反馈码
+enum E_REFUND_RET
+{
+	EM_REFUND_SUC = 0,
+	EM_REFUND_LACK = 1,  		//缺钱
+	EM_REFUND_OTHER = 2, 		//其他异常
+};
+
+//退款原因类型
+enum emRefundReasonType
+{
+	EM_RF_REASON_TYPE_GB_FREIGHT = 2,			        //退运费
+    EM_RF_REASON_TYPE_OVERMUCH = 14,                    //多拍/错拍/不想要
+    EM_RF_REASON_TYPE_EXPRESS_SLOW = 15,                //快递一直未送到 
+    EM_RF_REASON_TYPE_NO_ONTIME = 11,			        //未按约定时间发货 
+    EM_RF_REASON_TYPE_NO_EXPRESS_RECORD = 16, 			//快递无跟踪记录 
+    EM_RF_REASON_TYPE_MISS = 8,				            //空包裹/少件/漏发
+	EM_RF_REASON_TYPE_7DAY_NOREASON = 1,			    //7天无理由
+    EM_RF_REASON_TYPE_OBJECT_NO_MATCH = 18, 		    //大小/尺寸与商品描述不符
+    EM_RF_REASON_TYPE_QUALITY_ISSUE = 6,		        //质量问题
+    EM_RF_REASON_TYPE_DELIVER_NO_MATCH = 19,     	    //卖家承诺发货时间/提货地点不符
+    EM_RF_REASON_TYPE_MISTAKE = 13,				        //卖家发错货
+    EM_RF_REASON_TYPE_BROKEN = 9,				        //包装/商品破损/污渍
+    EM_RF_REASON_TYPE_OTHER = 17,                       //其他
+	EM_RF_REASON_TYPE_SIZE_NO_MATCH = 3, 			    //大小/尺寸与商品描述不符
+	EM_RF_REASON_TYPE_STYLE_NO_MATCH = 4,			    //颜色/图案/款式与商品描述不符
+	EM_RF_REASON_TYPE_STUFF_NO_MATCH = 5,        	    //材质与商品描述不符
+	EM_RF_REASON_TYPE_ALLERGY = 7,				        //商品使用后过敏
+	EM_RF_REASON_TYPE_FAKE = 10,				        //假冒品牌
+	EM_RF_REASON_TYPE_BILL_ISSUE = 12,			        //发票问题
+};
+
+enum TYPE_GOODS                  //商品类型
+{
+    TYPE_INVALID = 0,              //非法类型
+    TYPE_REAL  = 1,                //实物
+    TYPE_VIRTUAL = 2,              //虚拟物品
+	TYPE_OFFLINE = 3,          	   //线下商品
+};
+
+enum TYPE_POST                    //物流类型
+{
+    TYPE_EXPRESS = 1,            //手动物流
+    TYPE_NONE = 2,               //无需物流
+	TYPE_TEST = 3, 				 //测试订单
+	TYPE_AUTO_EXPRESS = 4, 		 //系统自动物流
+};
+
+enum STATUS_EXPRESS_ORDER                       //物流订单状态
+{
+    EST_PRE_ORDER = 1,                  //预下单
+    EST_WAIT_FOR_PAY = 2,    	        //待支付
+    EST_WAIT_FOR_CONFIRM = 3,  			//支付待确认
+    EST_WAIT_FOR_DELIVER = 4,     		//待发货
+    EST_WAIT_FOR_RECEIVE = 5,     		//待收货
+    EST_GOODS_CONFIRM = 6,        		//确认收货
+    EST_DEAL_CANCEL = 7,              	//交易取消
+    EST_DEAL_FINISH = 8,                //交易完成
+	EST_EARNEST_PAYED = 9,              //定金已支付   
+	EST_WAIT_FOR_FINAL_AFFIRM = 10,     //支付尾款待确定
+};
+
+enum STATUS_PACKAGE_ORDER                       //包裹订单状态
+{
+    PKGST_WAIT_FOR_DELIVER = 4,     		//待发货
+    PKGST_WAIT_FOR_RECEIVE = 5,     		//已发货
+	PKGST_CANCLE = 7, 						//取消发货
+	PKGST_DEAL_FINISH = 8,                //交易完成         
+	PKGST_EARNEST_PAYED = 9,                  //定金已支付   
+	PKGST_WAIT_FOR_FINAL_AFFIRM = 10,        //支付尾款待确定
+};
+
+enum STATUS_PAY_ORDER                       //支付订单状态
+{
+    PST_PRE_ORDER = 1,                  //预下单
+    PST_WAIT_FOR_PAY = 2,             	//待支付
+    PST_WAIT_FOR_AFFIRM = 3,       		//支付待确定
+    PST_PAYED = 4,                      //已支付
+    PST_CANCEL = 5,                     //支付取消
+    //为了兼容前端的外显，6、7、8先不用了
+	PST_EARNEST_PAYED = 9,                  //定金已支付    
+	PST_WAIT_FOR_FINAL_AFFIRM = 10,          //支付尾款待确定
+};
+
+enum STATUS_REFUND_ORDER                      //商品订单（退货订单）状态
+{
+    RST_WAIT_FOR_EXAMINE = 1,           //待商家确认
+    RST_WAIT_FOR_BACK = 2,                //待退货
+    RST_WAIT_FOR_CONFIRM = 3,          //待退货确认
+    RST_WAIT_FOR_SERVICE = 4,           //退货前待客服仲裁
+    RST_WAIT_FOR_REFUND = 5,            //退款中
+    RST_REFUND_CONFIRM = 6,              //已退款
+    RST_REFUND_CANCEL = 7,                //取消退款
+	RST_REFUND_COMMIT = 8,                //退款已提交
+	RST_REFUND_FAILED = 9, 			      //退款失败
+    RST_WAIT_FOR_SERVICE_B = 10,      //退货后待客服仲裁
+	RST_REFUND_REJECT = 11, 		  //运营仲裁驳回
+	RST_WAIT_FOR_COMP = 12, 		//待运营赔付退款
+	RST_WAIT_SELLER_DEAL = 400,     //虚拟状态，待商家处理
+};
+
+enum CODE_PAY_OPERATION                 //支付订单操作码
+{
+	POP_MIN = 100, 						//支付操作起始
+    POP_CREATE_ORDER = 101,             //创建订单
+    POP_PAY_ORDER = 102,                //支付
+    POP_PAY_CONFIRM = 103,              //确认支付
+    POP_PAY_TIMEOUT = 104,              //支付超时
+    POP_PAY_CANCEL = 105,               //取消支付
+	POP_PAY_UNPAYED = 106,              //确认未支付
+	POP_APPEND_PAY_INFO = 107,          //写入支付附加信息
+	POP_APPEND_PAY_USER = 108, 			//写入支付用户信息
+	POP_CREATE_FREE_ORDER = 109,     	//创建免单订单 		//无需支付，直接流转待发货（慎用）
+	POP_PAY_PREPAY_ORDER = 110,         //支付预付订单      
+	POP_PAY_PREPAY_UNPAYED = 111,       //确认预付订单未支付
+	POP_PAY_PREPAY_CONFIRM = 112,       //确认支付预付订单
+	POP_MAX = 199, 						//支付操作结束
+};
+
+enum CODE_EXPRESS_OPERATION                     //物流订单操作码
+{
+	EOP_MIN = 200,
+    EOP_CREATE_ORDER = 201,             //创建订单（已废弃）
+    EOP_PAY_ORDER = 202,                   //支付（已废弃）
+    EOP_PAY_CONFIRM = 203,                //确认支付（已废弃）
+    EOP_DELIVER_ORDER = 204,            //发货
+    EOP_RECEIVE_CONFIRM = 205,         //确认收获
+    EOP_RECEIVE_TIMEOUT = 206,         //确认收货超时
+    EOP_COMMENT = 207,                      //评论
+    EOP_PAY_TIMEOUT = 208,                //支付超时
+	EOP_DELAY_CONFIRM = 209,           //延长确认收获
+	EOP_URGE_DELIVER = 210,              //催促发货
+    EOP_FINISH = 211,                           //自动完成订单(暂未实现)
+	EOP_DELETE = 212,                         //删除订单
+	EOP_APPEND_EXPRESS_INFO = 213, 			//附加物流单信息
+	EOP_MODIFY_EXPRESS_INFO = 214,       //修改物流单信息
+	EOP_MODIFY_ADDRESS_INFO = 215,       //修改订单地址信息
+	EOP_MAX = 299,
+};
+
+enum CODE_REFUND_OPERATION     //退货订单操作码
+{
+	ROP_MIN = 300,
+    ROP_CREATE_REFUND = 301,          //创建退货订单
+    ROP_REFUND_ALLOWED = 302,       //退货审核通过
+    ROP_ARBITRATE_EXPRESS = 303,   //仲裁录入快递单号
+    ROP_SET_EXPRESS = 304,              //录入快递单号
+    ROP_REFUND_REJECT = 305,          //退货前商家发起仲裁（复用之前的商家拒绝退款，所以协议里名字不变）
+    ROP_DELIVER_REJECT = 306,         //退货后商家发起仲裁（复用之前的商品不完整，所以协议里名字不变）
+    ROP_ARBITRATE_REFUND = 307,    //仲裁退款
+    ROP_DELIVER_CONFIRM = 308,      //商品完整
+    ROP_REFUND_PAYED = 309,           //退款到账
+    ROP_REFUND_CANCEL = 310,         //取消退款
+	ROP_REFUND_COMMIT = 311, 		//提交到退款通道
+	ROP_SELLER_REFUND = 312,         //商家主动退货
+	ROP_REBATE_ALLOWED = 313,      //退款审核通过
+	ROP_REFUND_FAILED = 314, 		//退款失败
+	ROP_BACK_TIMEOUT = 315, 		//录入单号超时
+	ROP_APPLY_TIMEOUT = 316, 		//退货审核超时通过
+	ROP_MODIFY_APPLY = 317, 		//修改退货申请
+	ROP_EXAMINE_TIMEOUT = 318, 		//退款审批超时退款
+	ROP_ARBITRATE_REJECT = 319, 	//仲裁审核不通过
+	ROP_DELIVER_TIMEOUT = 320, 		//商品确认收货超时
+	ROP_REFUND_MPAYED = 321,           //人工设置退款到账
+	ROP_REFUND_MFAILED = 322,          //人工设置退款失败
+	ROP_USER_ARBITRATE = 323, 			//用户发起仲裁
+	ROP_SELLER_REJECT = 324, 			//商家拒绝退货
+	ROP_DELIVER_CONFIRM_COMP = 325,     //商家确认收货赔付退款
+	ROP_REBATE_ALLOWED_COMP = 326, 		//商家退款审核赔付退款
+	ROP_ARBITRATE_REFUND_COMP = 327, 	//运营仲裁通过赔付退款
+	ROP_EXAMINE_TIMEOUT_COMP = 328, 	//退款审批超时赔付退款
+	ROP_MAX = 399,
+};
+
+enum  CODE_PACKAGE_OPERATION 		//包裹订单操作码
+{
+	PKGOP_MIN = 400,
+	PKGOP_DELIVER_ORDER = 401,
+	PKGOP_MAX = 499,
+};
+
+enum TYPE_SCORE
+{
+    DESC_TYPE = 1,          //描述评分类型
+    FLOW_TYPE = 2,          //物流评分类型
+    SEVICE_TYPE = 3,        //服务评分类型
+};
+
+enum VCOIN_TYPE
+{
+	VCOIN = 0, 					//老V币
+	CHANNEL_CREDITS = 1, 		//渠道积分
+};
+
+enum JD_DELIVER_STATUS
+{
+	EM_DELIVER = 1, 					//出库
+	EM_CANCLE_DELIVER = 2,
+	EM_CANCLE_FAILED = 3,
+	EM_APPEND_EXPRESS_INFO = 4, 		//推送快递信息
+};
+
+struct STScoreInfo
+{
+    1 require int iType;                            //评分type，对应ScoreType的取值
+    2 require double dwScore;                       //分值
+};
+
+struct STPayInfo
+{
+	0 require string strPayOrderId; 		               //支付订单ID（预下单不需要）
+    1 require string strUserId;                               //用户ID（VUID）
+	3 require unsigned int uiCashPrice; 	                       //支付总价
+    4 require unsigned int uiVCoinSum;                 //支付积分总数（最早是V币，后来根据渠道使用积分）
+    5 require unsigned int uiVCoinDiscount;                   //积分抵扣额（最早是V币，后来根据渠道使用积分）
+    6 require unsigned int uiStatus;                       //支付状态（查询返回）
+	7 optional string strPayUserId; 						//支付用户ID
+	8 optional int iMTimestamp; 									//修改时间戳
+	9 optional vector<string> vecCouponId; 							//优惠券ID列表
+	10 optional STPayUserInfo stPayUserInfo; 						//支付用户信息
+	11 optional string strPayTag;                           //下单渠道信息
+	12 optional unsigned int uiTransPrice;                      //包含的运费
+	13 optional STPayPriceInfo stPayPriceInfo; 			//支付价格信息，统一收敛到这个结构
+    14 optional int iPayPlatform;                                   //支付平台号
+    15 optional string strOmgId;                                   //下单时的OMGID
+	16 optional string strChannelId; 								//渠道ID
+	17 optional int iVCoinType; 									//积分类型 (对应VCOIN_TYPE)
+	18 optional string strPTime; 									//支付时间
+	19 optional string strCTime; 								//创建时间
+    20 optional int iPayMethod;                                //支付方式（对应E_PAY_METHOD）
+		21 optional unsigned int uiPddGlodsCoinSum;  //金币支付总额
+    22 optional unsigned int uiPddGlodsDiscount; //支付金币抵扣额
+};
+
+	
+struct STGOrderInfo
+{
+    0   require string strRefundOrder;                  //商品订单ID（退货仅退货用）
+    1   require string strSKUId;                        //商品（SKU）ID
+    2   require string strSKUTitle;                     //商品标题
+    3   require string strSKUPic;                       //商品图片
+    4   require int iGoodsType;                         //商品类型（参考TYPE_GOODS
+    5   require string strSellerId;                     //商家ID
+    6   require STPriceInfo stPriceInfo;                //价格信息
+    7   require double dfProfitRatio;                   //分成比例
+    8 	require unsigned int uiGoodsNum;            	//商品数量
+	9   require vector<STPropInfo> vecProps; 			//SKU所包含的属性信息
+	10  optional string strProductId; 					//商品ID
+	11  optional unsigned int uiRefundFlag; 			//退货标记
+	12  optional int iSaleType; 						//销售类型（0：正常，1：预售）
+	13 	optional int iPreSaleTime; 						//预计发货时间（时间戳）
+	14  optional string strPreSaleTime; 				//预计发货时间（字符）
+	15  optional unsigned int uiRefundStatus; 			//退货状态
+	16 	optional vector<string> vecIPId; 				//商品所属IPId
+	17  optional unsigned int uiTaxRate = 0;    		//税率，单位 万分之一
+	18  optional string strBarCode; 					//条码
+	19  optional unsigned int uiRefundNum;      		//退款数量
+	20  optional string strBatchId; 					//批次ID
+	21  optional string strStoreId; 					//仓储ID
+	22  optional string strPackageId; 					//包裹ID
+	23  optional string strActId; 						//活动ID
+	24  optional string strExtData; 					//扩展存储信息（渠道分成信息等）
+	25  optional string strJsDesignData; 				//用户定制Js信息（DesignKey等）
+	//26  optional string strRePolicy; 					//退换货策略ID
+	27 optional int iRePolicyType;                      //退换货策略类型, 对应公共库EMRepolicyType
+  28 optional int iPresaleType;                       //预售类型
+	29 optional int iGiftStatus;        //礼物状态
+	30 optional int iModifyAddrForbidden;        //标识订单页是否可以修改地址
+};
+
+struct STLogFlow
+{
+    0  require string strId;                                    //当前ID
+    1  require int iOperationId;                             //操作ID
+    2  require int iStatusBefore;                           //操作前状态
+    3  require int iStatusAfter;                              //操作后状态
+	4  require string strMTime;                        		    //修改时间
+	5  optional int iMTimestamp; 								//修改时间戳
+	6  optional string strExtData; 								//操作附加信息
+};
+
+struct STUserInfo
+{
+    0 optional string strUserNick;
+    1 optional string strQQ;
+    2 optional string strOpenId;
+};
+
+//退款信息
+struct STRefundInfo
+{
+	0 require string strExpressOrderId;             	//物流订单
+	1 require string strSKUId;                      	//商品SKUId
+	2 require string strExpressId;                  	//快递单号
+	3 require unsigned int uiExpressCode;           	//快递公司代码
+	4 require unsigned int uiCashPrice;                 //退货现金金额
+	6 require unsigned int uiRefundVCoin;           	//退货V币数
+	7 require unsigned int uiRefundType;				//退款类型，参考emRefundType
+	8 require unsigned int iRefundReasonType;       	//退款理由类型，参考emRefundReasonType
+	9 optional STPostInfo stPostInfo;					//退货邮寄地址
+	10 optional string strDesc;                      	    //退货描述
+	11 optional string strProvePic;                  	//证明图片
+	12 optional string strArbitResult;               	//仲裁描述
+	13 optional string strPayOrderId; 					//支付订单ID
+	14 optional string strRefundOrder;         			//退货订单
+	15 optional unsigned int uiStatus;             		//退货订单状态
+	16 optional string strUserId;                           //用户ID
+	17 optional unsigned int uiGoodsNum; 				//退货数量
+    18 optional STGOrderInfo stGoodsInfo;               //商品信息
+	19 optional string strMTime;                            //修改时间
+	20 optional string strExpressPic;                  	    //运单图片
+	21 optional string strArbitDesc;                        //商家仲裁描述
+	22 optional vector<string> vecArbitProvePic;    	//商家仲裁证明图片
+    23 optional unsigned int uiArbitCashPrice;                 //仲裁退款现金金额
+	24 optional vector<STLogFlow> vecRefundFlow; 				//退货操作流水
+	25 optional vector<unsigned int> vecOperation; 				//该状态下可以执行的操作码 
+	26 optional unsigned int uiArbitrateOp;                     //仲裁的操作
+	27 optional string strPayUserId; 							//支付用户ID
+	28 optional unsigned int uiOrderStatus; 					//关联物流订单状态
+    29 optional string strUserNick;                              //用户昵称
+    30 optional string strSellerName;                          //商家名称
+	31 optional STUserInfo stUserInfo; 						   //用户信息
+	32 optional unsigned int uiTransPrice; 						//需要退的运费
+	33 optional int iRemainingTime;                           //剩余自动流转时间
+	34 optional string strCTime; 						//创建时间
+	35 optional string strPTime; 						//支付时间
+	36 optional unsigned int uiRefundMethod;         //退款方式
+	37 optional STPayUserInfo stPayUserInfo;         //支付用户信息
+	38 optional unsigned int uiRefundRet; 			 //退款反馈码
+    39 optional int iReStoreType;                        //退库存类型emReStoreType
+};
+
+struct STStoreInfo
+{
+    1 optional string strStoreId;                                    //仓库ID
+    2 optional string strStoreName;                               //仓库名称
+};
+
+struct STPackageInfo
+{
+    0 optional string strPackageId;                                   //包裹ID
+    1 optional string strExpressOrderId;                	          //物流订单ID （用户订单ID）
+    2 optional string strPayId;                                       //支付单ID
+    3 optional string strUserId;                                      //用户ID（VUID）
+    4 optional unsigned int uiStatus;                                 //包裹状态
+    5 optional string strExpressId;                                   //快递单号
+    6 optional unsigned int uiExpressCode;          	              //快递公司代码
+	7 optional STExpressNode stExpressNode; 						  //最近快递信息
+	8 optional vector<STGOrderInfo> vecGOrderInfo;      			  //包裹订单下属商品
+    9 optional string strMTime;                                       //修改时间
+    10 optional string strCTime;                                      //创建时间
+    11 optional STStoreInfo stStoreInfo;                         //仓库ID
+	12 optional int iOrderType; 								//物流订单类型（参考TYPE_POST）
+};
+
+
+struct STExpressOrderInfo
+{
+    0   require string strExpressOrderId;                            //物流订单ID（预下单不需要）
+    1   require string strPayOrderId;                                  //相关支付订单ID（预下单不需要）
+    2   require string strUserId;                                         //用户ID（VUID）
+    3   require int iOrderType;                                          //物流订单类型（参考TYPE_POST）
+    4   require vector<STGOrderInfo> vecGOrderInfo;       //物流订单下属商品
+    5   require unsigned int uiCashPrice; 	                      //支付总价
+    6   require unsigned int uiVCoinSum;                         //支付积分总数（最早是V币，后来根据渠道使用积分）
+    7   require unsigned int uiVCoinDiscount;                   //积分抵扣额（最早是V币，后来根据渠道使用积分）
+    8   require unsigned int uiStatus;                               //物流订单状态
+    9   require unsigned int uiRefundFlag;                        //退货标记
+    10 require unsigned int GoodsSum;                            //商品总数
+    11 require string strSellerId;                                      //商家ID
+    12 require STPostInfo stPostInfo;                               //邮寄信息
+    13 optional string strExpressId;                                 //快递单号
+    14 optional unsigned int uiExpressCode;                     //快递公司代码
+    15 optional int iPayType;						                     //支付类型，参考emPayType
+    16 optional int iCommentFlag;                                   //评论标记
+    17 optional string strMTime;                                       //修改时间
+    18 optional string strCTime;                                        //创建时间
+    19 optional vector<STRefundInfo> vecRefundInfo;      //物流订单下退货商品
+    20 optional unsigned int uiTransPrice; 	                      //运费
+	21 optional vector<STLogFlow> vecOrderFlow;          //操作流水
+	22 optional unsigned int uiDelayTime;                        //延迟收货次数
+    23 optional string strLastRemindTime;                       //上次提醒时间
+	24 optional string strNote; 								        //用户留言
+    25 optional string strSellerName;                              //增加商家名称
+    26 optional vector<STScoreInfo> vecScoreInfo;         //评论评分信息
+	27 optional string strCancelResult; 				  //取消原因
+	28 optional unsigned int uiVIPDiscount; 			  //VIP抵扣
+	29 optional STUserInfo stUserInfo; 					//用户信息
+	30 optional STPayPriceInfo stPayPriceInfo; 			//订单价格信息，统一收敛到这个结构
+	31 optional int iRemainingTime;                           //剩余自动流转时间
+	32 optional string strStoreId; 							//仓储ID
+    33 optional int iVCoinType; 									//积分类型 (对应VCOIN_TYPE)
+	34 optional string strPreDeliverTime; 					//预计到货时间
+	35 optional vector<STPackageInfo> vecPackageInfo;       //包裹列表
+	36 optional string strPayExtData;                                //下单时存储的扩展信息
+	37 optional int cFlag;                                //订单是否展示
+ 
+	38 optional unsigned int uiPddGoldsSum;                         //新增 支付金币总数
+	39 optional unsigned int uiPddGlodsDiscount;                   //新增 金币抵扣额
+};
+
+struct STExpressOrderBaseInfo
+{
+	0 optional STExpressOrderPriceInfo stExpressOrderPriceInfo;
+	1 optional string strNode;
+	2 optional string strSellerId;
+	3 optional vector<STGOrderInfo> vecGOrderInfo;       //物流订单下属商品
+};
+
+
+struct STPreorderReq                           //预下单
+{
+    0 require STPayInfo stPayInfo;                                   //支付信息
+    1 require vector<STGOrderInfo> vecGOrderInfo;       //下单商品
+    2 require STPostInfo stPostInfo;                                //用户快递信息
+    3 require string strAppId;
+    4 require string strAppKey;
+	5 optional string strNote; 							//用户留言
+	6 optional vector<STExpressOrderPriceInfo> vecExpressOrderPriceInfo;        //拆单加个结构
+};
+
+struct STPreorderRsp
+{
+    0 require int iErrCode;
+    1 require string strErrMsg;
+    2 require string strPayOrderId;
+};
+
+struct STModifyPayStatusReq                //修改支付订单状态
+{
+    0 require string strPayOrderId;
+    1 require unsigned int uiOperation;
+    2 require string strAppId;
+    3 require string strAppKey;
+	4 optional string strPayUserId;
+	5 optional string strCancleResult; 		//取消原因
+	6 optional STPayUserInfo stPayUserInfo; //支付用户信息
+    7 optional int iPayPlatform;                    //支付平台号
+};
+
+struct STModifyPayStatusRsp
+{
+    0 require int iErrCode;
+    1 require string strErrMsg;
+    2 require unsigned int uiPayStatus;
+};
+
+struct STModifyOrderStatusReq           //修改物流订单状态
+{
+    0 require STExpressOrderInfo stExpressOrderInfo;
+    1 require unsigned int uiOperation;
+    2 require string strAppId;
+    3 require string strAppKey;
+};
+
+struct STModifyOrderStatusRsp
+{
+    0 require int iErrCode;
+    1 require string strErrMsg;
+    2 require unsigned int uiOrderStatus;
+	3 optional int iLogicCode; 					//逻辑执行码,对应枚举LOGIC_CODE
+};
+
+struct STModifyPackageStatusReq
+{
+	0 optional string strPackageId; 			//包裹订单ID
+    1 optional unsigned int uiOperation; 		//操作码
+	2 optional string strExpressId; 			//快递公司
+	3 optional int uiExpressCode; 				//公司编码
+	4 optional string strPreDeliverTime; 		//预计送达时间
+};
+
+struct STModifyPackageStatusRsp
+{
+	0 require int iErrCode;
+	1 require string strErrMsg;
+	2 require unsigned int uiPackageStatus;
+};
+
+
+struct STModifyRefundReq                   //修改商品退货订单
+{
+    0 require STRefundInfo stRefundInfo;
+    1 require unsigned int uiOperation;
+    2 require string strAppId;
+    3 require string strAppKey;
+	4 optional string strRefundOrder;
+};
+
+struct STModifyRefundRsp
+{
+    0 require int iErrCode;
+    1 require string strErrMsg;
+    2 require unsigned int uiRefundStatus;
+	3 require string strRefundOrder;
+};
+
+struct STReadPayOrderInfoReq               //读支付订单详细信息
+{
+    0 require string strPayOrderId;
+    1 require string strAppId;
+    2 require string strAppKey;
+};
+
+struct STReadPayOrderInfoRsp
+{
+    0 require int iErrCode;
+    1 require string strErrMsg;
+    2 require STPayInfo stPayInfo;                                   //支付信息
+    3 require vector<STGOrderInfo> vecGOrderInfo;       //下单商品
+    4 require STPostInfo stPostInfo;                                 //用户快递信息
+	5 optional string strNote; 										//用户留言
+	6 optional vector<string> vecOrderId; 							//物流订单列表（目前只随机返回一个）
+};
+
+struct STReadPayExpressListReq               //读支付订单详细信息
+{
+    0 require string strOrderId;
+	1 optional string strPayId; 			
+};
+
+struct STReadPayExpressListRsp
+{
+    0 require int iErrCode;
+    1 require string strErrMsg;
+    2 optional vector<STExpressOrderInfo> vecExpressOrderInfo;                                   //物流单信息
+	3 optional STPayInfo stPayInfo; 															//支付单信息
+};
+
+struct STReadOrderInfoReq               //读物流订单详细信息
+{
+    0 require string strOrderId;
+    1 require string strAppId;
+    2 require string strAppKey;
+	3 optional string strPackageId;
+};
+
+struct STChannelInfo{
+    0 optional string strChannelId;
+    1 optional string strChannelName;
+};
+
+struct STReadOrderInfoRsp
+{
+    0 require int iErrCode;
+    1 require string strErrMsg;
+    2 require STExpressOrderInfo stExpressOrderInfo;
+    3 optional STChannelInfo stChannelInfo;                   //渠道信息
+};
+
+struct STReadPackageInfoReq               //读包裹单详细信息
+{
+    0 require string strPackageId;
+};
+
+struct STReadPackageInfoRsp
+{
+    0 require int iErrCode;
+    1 require string strErrMsg;
+    2 require STPackageInfo stPackageInfo;
+	3 optional STPostInfo stPostInfo; 
+};
+
+struct STReadPackageListReq               //读物流订单包裹列表信息
+{
+    0 require string strOrderId;
+    1 require string strAppId;
+    2 require string strAppKey;
+};
+
+struct STReadPackageListRsp
+{
+    0 require int iErrCode;
+    1 require string strErrMsg;
+    2 require vector<STPackageInfo> vecPackageInfo;
+};
+
+struct STReadUserOrderListReq           //查询用户物流订单
+{
+    0 require string strUserId;
+    1 require unsigned int uiOrderStatus;
+	2 require unsigned int uiPageNum;
+	3 require unsigned int uiPageSize;
+    4 require string strAppId;
+    5 require string strAppKey;
+};
+
+struct STReadUserOrderListRsp
+{
+    0 require int iErrCode;
+    1 require string strErrMsg;
+    2 optional vector<STExpressOrderInfo> vecExpressOrderInfo;
+	3 optional int iTotalCount;
+};
+
+struct STReadUserRefundListReq
+{
+    0 optional unsigned int uiRefundStatus;
+	1 optional unsigned int uiPageNum;
+	2 optional unsigned int uiPageSize;
+};
+
+struct STReadUserRefundListRsp
+{
+	0 require int iErrCode;
+    1 optional string strErrMsg;
+    2 optional vector<STRefundInfo> vecRefundOrderInfo;
+	3 optional int iTotalCount;
+	4 optional map<string, string> mapSellerName;
+};
+
+struct STReadRefundOrderReq             //查询退货订单
+{
+    0 require string strRefundOrder;
+    1 require string strAppId;
+    2 require string strAppKey;
+};
+
+struct STReadRefundOrderRsp
+{
+    0 require int iErrCode;
+    1 require string strErrMsg;
+    2 optional STRefundInfo stRefundInfo;
+	3 optional STPayInfo stPayInfo;
+};
+
+struct STFilterInfo                                                 //订单列表筛选项
+{
+    0 optional string strStartCTime;
+    1 optional string strEndCTime;
+    2 optional string strOrderId;
+	3 optional string strUserId;
+	4 optional string strPhoneNum;
+	5 optional string strSearchTerms;
+};
+
+//筛选条件
+//strExpressOrderId 物流订单ID
+//strPayOrderId 支付订单ID
+//strUserId,	用户ID
+//strPhone,	用户电话
+//strRefundOrder, 退款订单ID
+//strSKUId,	商品SKUID
+//strProductId, 商品ID
+//strIPId, 商品IP ID
+//iSaleType, 预售状态
+//strQQ, 用户QQ号
+//strExpressId, 快递单号
+//strPreSaleTime，预售时间
+//iActType, 活动类型  //100以后是其他筛选入101定制商品
+
+struct STSearchRange
+{
+    0 require string strSearchKey;
+    1 require string strSearchStart;
+    2 require string strSearchEnd;
+};
+
+struct STSearchInfo
+{
+    0 optional vector<STConInfo> vecConInfo;                  //搜索筛选条件
+    1 optional string strFullSearch;                          //全文搜索关键词
+	2 optional vector<STSearchRange> vecSearchRange;     	  //范围搜索关键词
+};
+
+struct STReadSellerOrderListReq                                     //查询商户物流订单
+{
+    0 require string strSellerId;                                        //商户ID
+    1 require unsigned int uiOrderStatus;                         //订单状态
+	2 require unsigned int uiPageNum;                            //页码
+    3 require unsigned int uiPageSize;                             //页大小
+    4 require string strAppId;                                           
+    5 require string strAppKey;                                        
+    6 optional unsigned int uiRefundFlag;                        //退货标记
+	7 optional STFilterInfo stFilterInfo; 						 //列表筛选项
+	8 optional unsigned int uiArbitrateFlag; 					 //仲裁标记
+	9 optional unsigned int uiRefundStatus;                        //退货状态
+    10 optional unsigned int uiShowRefund;                      //显示退货订单
+	11 optional STSearchInfo stSearchInfo; 						//搜索用结构
+	12 optional vector<int> vecOrderStatus;                     //订单状态列表                            
+	13 optional vector<int> vecRefundStatus;                    //退款单状态列表（仅在退货标记生效时有用）
+	14 optional int iReqType; 									//请求类型（1：实时请求，2：离线拉取，3：离线全量拉取）
+	15 optional string strContext; 								//离线扫表上下文
+};
+
+struct STReadSellerOrderListRsp
+{
+    0 require int iErrCode;
+    1 require string strErrMsg;
+    2 optional vector<STExpressOrderInfo> vecExpressOrderInfo;
+    3 optional int iTotalCount;
+	4 optional string strContext; 								//离线扫表上下文
+	5 optional int iRealTotalCount; 							//实际命中数（可能不准）
+};
+
+struct STReadDeliveryOrderListReq                                  //查询需要发货的包裹单列表
+{
+	1 require unsigned int uiPageNum;                            //页码
+    2 require unsigned int uiPageSize;                             //页大小
+	3 optional STSearchInfo stSearchInfo; 						//搜索用结构
+    4 optional int iReqType; 									        //请求类型（1：实时请求，2：离线拉取，3：离线全量拉取）
+	5 optional string strContext; 								    //离线扫表上下文
+    6 optional vector<string> vecFilterSKUId;                                //过滤用的SKUList
+	7 optional unsigned int uiShowRefund;                      //显示退货订单
+    8 optional vector<string> vecFilterProductId;                //过滤用的ProductList
+};
+
+struct STReadDeliveryOrderListRsp
+{
+    0 require int iErrCode;
+    1 require string strErrMsg;
+    2 optional vector<STExpressOrderInfo> vecExpressOrderInfo;
+    3 optional int iTotalCount;
+	4 optional string strContext; 								//离线扫表上下文
+	5 optional int iRealTotalCount; 							    //实际命中数（可能不准）
+	6 optional bool bHasNext; 									//离线拉取是否需要继续请求下一页
+};
+
+struct STLogFlowReq             //日志流数据
+{
+    0 require string strId;
+    1 require int emFlowType;
+    2 require string strAppId;
+    3 require string strAppKey;
+};
+
+struct STLogFlowRsp
+{
+    0 require int iErrCode;
+    1 require string strErrMsg;
+    2 optional vector<STLogFlow> vecOrderFlow;
+};
+
+struct STDivisionOrderInfo
+{
+    0 require string strSellerId;                   //商家ID
+    1 require long ddwPostageId;                //运费模版
+    2 optional vector<VideoMall::STGOrderInfo> vecGOrderInfo;
+	3 optional int iPreSaleTime;                    //预计发货时间（时间戳）
+	4 optional string strStoreId; 					//仓储ID
+	5 optional string strProductId; 				//商品ID
+};
+
+struct STDivisionOrderReq
+{
+    0 require vector<VideoMall::STGOrderInfo> vecGOrderInfo;       //下单SKUID
+	1 optional string strChannelId;                                //渠道ID
+};
+
+struct STDivisionOrderRsp
+{
+    0 require int iErrCode;
+    1 require string strErrMsg;
+	2 optional map<string, VideoMall::STExpressOrderInfo> mapExpressOrderInfo; 		//物流订单结构(逐步废弃)
+	3 optional vector<VideoMall::STDivisionOrderInfo> vecDivisionOrderInfo; 		//拆单结构
+	4 optional string strStoreId;                                                  //仓储ID
+};
+
+struct STReadUndealOrderNumReq                              //查询未处理订单数
+{
+    0 optional unsigned int uiReqRole;                               //角色(0用户，1商家，2运营)
+    1 optional string strAppId;
+    2 optional string strAppKey;
+};
+
+struct STReadUndealOrderNumRsp                            
+{
+    0 optional int iErrCode;
+    1 optional string strErrMsg;
+    2 optional STUndealOrderNumInfo stUndealOrderNumInfo;
+};
+
+struct STUserOrderTransfer
+{
+    1 optional string strUserId;								            //用户ID
+    2 optional string strOrderId;								            //订单ID  （依据操作的不同可能是支付ID，物流订单ID，维权ID）                       
+	3 optional unsigned int uiOperation;						            //订单操作（对应CODE_EXPRESS_OPERATION）
+    4 optional vector<STGOrderBase> vecGOrderBase;  						//相关商品订单结构
+    5 optional STPriceInfo stPriceInfo;                                     //相关订单价格信息
+	6 optional string strExpressId;                                         //快递单号
+	7 optional string strExpressCode;                                       //快递公司代码
+	8 optional string strPhoneNum; 											//电话
+	9 optional unsigned int uiCurStatus;                                    //操作后状态
+	10 optional STPostInfo stPostInfo; 										//邮寄信息
+	11 optional string strRefundId;                                         //退款订单ID
+	12 optional unsigned int iMTimestamp; 									//修改时间戳
+	13 optional vector<string> vecExpressOrderId; 							//支付订单中转出来的相关物流订单ID
+	14 optional string strSellerId; 										//退款中转附带的商家ID
+	15 optional string strPayOrderId; 										//订单相关的支付流水号（支付单号）
+	16 optional string strChannelId; 										//下单渠道ID
+};
+
+struct STExpressInfo
+{
+	0 optional string strExpressId;
+	1 optional string strOrderId;
+	2 optional STGOrderInfo stGOrderInfo;
+	3 optional STExpressNode stExpressNode;
+};
+
+struct STReadLastExpressReq
+{
+	0 require int iReqNum; 				//请求数量
+};
+
+struct STReadLastExpressRsp
+{
+	0 require int iErrCode;
+	1 require string strErrMsg;
+	2 optional vector<STExpressInfo> vecExpressInfo;
+};
+
+struct STAutoDeliverNotifyReq
+{
+    0 optional string strOrderId;                               //订单号
+    1 optional string strExpressId;                             //快递单号
+    2 optional string strExpressCode;                         	//快递公司代码
+    3 optional int iStatus;                                     //当前状态（对应JD_DELIVER_STATUS）
+	4 optional string strPreDeliverTime; 						//预计到货时间
+};
+
+struct STAutoDeliverNotifyRsp
+{
+    0 require int iErrCode;
+ 	1 require string strErrMsg;
+};
+
+};
+

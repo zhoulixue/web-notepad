@@ -1,0 +1,35 @@
+//0xf3f5
+module VmallAddr
+{
+	struct STAddrData
+	{
+		0 optional int iId;
+		1 optional string strName;
+	};
+	
+	enum emAddrType
+	{
+		E_GET_PROVINCE = 1,
+		E_GET_CITY = 2,
+		E_GET_AREA = 3,
+	};
+	
+	struct STGetAddrReq
+	{	
+		0 optional int iType;
+		1 optional int iId;			//当type为2时，表示省的ID，为3时，表示市的ID
+	};
+	
+	struct STGetAddrRsp
+	{
+		0 optional int iErrCode;
+		1 optional string strErrMsg;
+		2 optional vector<STAddrData> vecAddr;
+		3 optional int iType;					//这里表示取到的地址的类型，1表示省，2市 3区
+	};
+	
+};
+
+
+	
+	

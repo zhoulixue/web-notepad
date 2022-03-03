@@ -1,0 +1,140 @@
+module VMallRank
+{
+	/*
+	  测试环境: 10.49.107.200:24486
+	  正式环境：913345:851968
+	 */
+	enum emServiceCmd
+	{
+		CMD_RANK_LIST = 0xfb94,              // 查询排行榜
+		CMD_PERSONAL_RANK = 0xfb95,          // 查询个人排行信息
+	};
+	enum emErrCode
+	{
+		RT_GET_LIST_ERROR = 2001,
+		RT_GET_FNO_LIST_ERROR = 2002,
+		RT_RERANK_ERROR = 2003,
+		RT_RERANK_FNO_ERROR = 2004,
+		RT_GET_RANK_NO_ERROR = 2005,
+		RT_GET_RANK_NO_FNO_ERROR = 2006,
+		RT_RERANK_BY_HAS_QUAN_ERROR = 2007,
+
+		RT_SET_USER_BUY_TOT_ERROR = 2008,
+		RT_SET_USER_BUY_CYC_ERROR = 2009,
+		RT_SET_PROD_SELL_FNO_ERROR = 2010,
+		RT_SET_CAT_PROD_SELL_FNO_ERROR = 2011,
+		RT_SET_IP_PROD_SELL_FNO_ERROR = 2012,
+		RT_GET_PROD_BASE_INFO_ERROR = 2013,
+		RT_GET_USER_INFO_ERROR = 2014,
+		RT_GET_RANK_INFO_ERROR = 2015,
+		RT_QUERY_READ_ERROR = 2016,
+		RT_ADD_SEARCH_ERROR = 2017,
+	};
+	enum emKeyType
+	{
+		KT_USER = 101,                // 用户
+		KT_SKU = 102,                 // SKU
+		KT_PROD = 103,                // 商品
+		KT_IP = 104,                  // 二级IP类目
+		KT_CAT = 105,                 // 一级真实类目 
+		KT_FST_IP = 106,                    // 一级IP
+		KT_SEC_CAT = 107,                   // 二级真实类目
+		KT_CHANNEL = 108,            // 渠道
+	};
+	enum emRankType
+	{
+		RT_PAY_NUM = 201,              // 支付量
+		RT_SALE = 202,                 // 销量
+		RT_MONEY = 203,                // 支付金额
+		RT_CMT_NUM = 204,              // 评论量
+		RT_ADDTRO = 205,               // 添加至购物车(收藏)量
+	};
+    struct STRankInfo
+	{
+		1 require string strId;
+		2 optional int iRankNo;           // 排名
+		3 optional int iRankValue;        // 数值
+	};
+	enum emFromNowOnType
+	{
+		FNO_SEVEN = 21,          // 近7天
+		FNO_THIRTY = 22,         // 近1月
+		FNO_ONE = 23,   // 当日
+	};
+	enum emCycleType
+	{
+		CT_DAY = 1,
+		CT_WEEK = 2,
+		CT_MONTH = 3,
+	};
+	enum emMultiRankTypeRule
+	{
+		MRTR_ADD = 11,           // 各依据确定自己的结果集，叠加。各排序依据是可累加的，如商品销量和收藏量，按销量+收藏量从大到小排
+		MRTR_PRI_ASC = 12,      // 依据一确定结果集，优先级递增。首先按照销量确定结果集，其次按照上架时间排序，商家时间相同时按照有库存、无库存排序，上架时间相同且同时有库存时按照销量排序
+		MRTR_PRI_DESC = 13,         // 依据一确定结果集，优先级递减。商品按照销量、有无库存、上架时间排序，首先根据销量确定结果集，然后销量相同的按照有库存、无库存排序，销量相同且同时有库存时根据上架时间排序  
+	};
+	// 通用的获取排行榜协议
+    struct STRankListReq
+	{
+		1 optional int iBGType;                         // 限定范围，取自emKeyType
+		2 optional string strBGId;
+		3 require int iKeyType;                         // 待排序元素，取自emKeyType
+		4 optional vector<int> vecRankType;             // 排序依据，可以有多个，依据必须可被emFromNowOnType和emCycleType修饰，取自emRankType
+		5 optional int iPageFlag;                       // =1:页码翻页 =2:上下文翻页
+		6 optional int iReqNum;
+		7 optional int iCurPage;
+		8 optional string strPageCtx;
+		9 optional map<int, int>  mapRank2Fno;                    // 近7天，近1月
+		10 optional map<int, int> mapRank2Cycle;                   // 小时，天，周
+		11 optional int iMrtrType;                      // vecRankType为多个时的处理规则，取自emMultiRankTypeRule
+	};
+	struct STUserInfo
+	{
+		1 require string strUserId;
+		2 optional string strNick;
+		3 optional string strHead;
+	};
+	struct STRankListRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<STRankInfo> vecRankInfo;
+		4 optional int iTotNum;
+		5 optional string strPageCtx;
+		6 optional bool bHasNext;
+		7 optional map<string, STUserInfo> mapUserId2Info;
+	};
+	// 个人排名情况
+	struct STPersonalRankReq  
+	{
+		1 optional int iBGType;
+		2 optional string strBGId;
+		3 require vector<int> vecRankType;
+		4 optional int iFnoType = 0;
+		5 optional int iCycType = 0;
+	};
+	struct STPersonalRankRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional STRankInfo stRankInfo;
+		4 optional STUserInfo stUserInfo;
+	};
+	// 写排名信息
+	struct STWriteRankReq
+	{
+		1 require int iWrtType;        // =1:新增或修改 =2:删除
+		2 optional int iBGType; 
+		3 optional string strBGId;
+		4 require int iKeyType;
+		5 require int iRankType;
+		6 optional int iFnoType;
+		7 optional int iCycType;
+		8 require STRankInfo stRankInfo;
+	};
+	struct STWriteRankRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+	};
+};

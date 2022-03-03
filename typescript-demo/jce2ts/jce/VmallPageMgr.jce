@@ -1,0 +1,400 @@
+#include "../vmall_page/VMallCModule.jce"
+
+module VmallPageMgr
+{
+	enum EMPageMgrCmd
+	{
+		E_GET_MOD_CONF_CMD = 0xf630,
+		E_SAVE_MOD_CMD = 0xf631,
+		E_PUB_PAGE_CMD = 0xf632,
+		E_DEL_MOD_CMD = 0xf633,
+		E_GET_TRASH_CMD = 0xf634,
+		E_DEL_TRASH_CMD = 0xf635,
+		E_RECOVER_TRASH_CMD = 0xf636,
+		E_GET_TRASH_CNT_CMD = 0xf637,
+		E_SAVE_PAGE_CONF_CMD =	0xf83c,			//保存页面配置信息
+		E_GET_PAGE_LIST_CMD = 0xf83d,			//获取货架列表
+		E_DEL_PAGE_CMD = 	0xf841,				//删除货架
+		E_OP_PAGE_CMD = 0xfa60,					//货架操作
+		E_PAGE_MGR_NOTIFY = 0xfab0,				//货架中转，线上
+		E_PAGE_MGR_NOTIFY_TEST = 0xfaaf,		//货架中转，测试
+	};
+	
+	
+	//模块图片信息
+	struct STModExtData
+	{
+		0 optional string strModId;			//模块ID
+		1 optional string strImgUrl;		//图片url
+		2 optional string strImgDesc;		//图片描述
+		3 optional int iImgType;			//图片类型
+		4 optional string strLinkUrl;		//跳转链接
+	};
+	
+	enum E_PARAM_TYPE
+	{
+		E_TYPE_PRI_CAT = 1,
+		E_TYPE_SEC_IP = 2,
+		E_TYPE_ACT = 3,
+		E_TYPE_SECKILL_ACT = 4,
+		E_TYPE_PROD_POOL = 5,
+	};
+	//删除货架
+	struct STDelPageReq
+	{
+		1 optional string strPageId;
+	};
+	struct STDelPageRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+	};
+	
+	
+	//保存页面配置信息
+	struct STSavePageConfReq
+	{
+		1 optional VmallPage::STPageConfData stPageConf;
+	};
+	struct STSavePageConfRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional string strPageId;
+	};
+	
+	enum EMPageStatus
+	{
+		E_PAGE_STATUS_DELETE = 0,
+		E_PAGE_STATUS_ONLINE = 1,
+		E_PAGE_STATUS_OFFLINE = 2,
+	};
+	
+	enum EMPageOpType
+	{
+		E_PAGE_OP_DELETE = 0,
+		E_PAGE_OP_ONLINE = 1,
+		E_PAGE_OP_OFFLINE = 2,
+	};
+	
+	
+	struct STOpPageReq
+	{
+		1 optional int iOpType;
+		2 optional string strPageId;
+	};
+	
+	struct STOpPageRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional int iNewStatus;
+		4 optional int iModifyTime;
+	};
+	
+	
+		
+	
+	//货架列表信息
+	struct STPageBaseData
+	{
+		1 optional string strId;
+		2 optional string strName;
+		3 optional int iType;
+		4 optional int iCreateTime;
+		5 optional string strUrl;
+		6 optional int iModifyTime;			//最近编辑时间
+		7 optional int iStatus;				//状态
+	};
+	
+	//获取货架列表
+	struct STGetPageListReq
+	{
+		1 optional int iType;			//0x01 按页码翻页
+		2 optional int iPageSize;
+		3 optional int iCurPage;
+	};
+	
+	struct STGetPageListRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<STPageBaseData> vecPage;
+		4 optional int iTotal;
+	};
+	
+	
+	//商品相关的配置数据
+	struct STProdConfData
+	{
+		0 optional string strProdId;		//商品ID
+		1 optional string strProdText;		//商品配置文案
+		2 optional unsigned int uiColor;	//商品底色
+		3 optional string strBackImg;		//商品背景图
+		4 optional string strConfTitle;		//配置标题
+	};
+	
+	//IP/类目/活动相关的配置数据  ，新的商品基础货架使用
+	struct STIpConfData
+	{
+		0 optional string strId;			//配置ID
+		1 optional int iIdType;				//ID 类型，对应E_PARAM_TYPE
+		2 optional string strPriId;			//一级ID，IP和类目使用
+		3 optional string strTitle;			//主标题
+		4 optional string strSubTitle;		//副标题
+		5 optional vector<STProdConfData>  vecConfProd;		//干预商品
+		6 optional string strBackImg;		//背景图，一个IP一个背景
+		7 optional string strMatImg;		//抠图，IP或者活动的抠图，用于频道页卡头部
+		8 optional vector<STProdConfData> vecEditTitleProd;			//只换名字的商品,只用于秒杀模块
+	};
+	
+	//图片配置数据
+	struct STImgConfData
+	{
+		1 optional string strImgUrl;
+		2 optional string strJmpUrl;
+	};
+	
+	//推荐语相关配置数据  ,目前用于内容banner模块
+	struct STRecomConfData
+	{
+		1 optional bool bHasRecomMan = false;
+		2 optional string strManId;					//推荐人ID
+		3 optional string strText;					//推荐语
+		4 optional STImgConfData stMainImg;			//主图
+	};
+	
+	
+	//今日推荐模块配置、单商品广告模块
+	struct STMultiProdConfData
+	{
+		0 optional vector<STProdConfData> vecProd;
+	};
+	
+	//多IP横划模块配置//IP小图横划配置,频道页头部模块，多秒杀活动模块
+	struct STMultiIpConfData
+	{
+		0 optional vector<STIpConfData> vecIp;
+		1 optional string strTitle;				//横划标题
+		2 optional bool bNoColor = false;		//是否拉取色值, 默认拉取
+	};
+	
+	//底部文案模块配置
+	struct STTextConfData
+	{
+		0 optional string strText;		//文案
+		1 optional string strUrl;		//跳转链接
+	};
+	
+	//视频双背景图配置
+	struct STVideoConfData
+	{
+		0 optional string strVid;
+		1 optional string strCoverUrl;
+		2 optional string strHeadImg;
+		3 optional string strTailImg;
+	};
+	
+	struct STCouponConfData
+	{
+		0 optional string strId;			//批次Id
+	};
+	
+	//多优惠券模块配置
+	struct STMultiCouponConfData
+	{
+		0 optional vector<STCouponConfData> vecCoupon;
+	};
+	
+	
+	
+	
+	//模块配置信息
+	struct STModConfData
+	{
+		0 optional string strModId;			//模块ID
+		1 optional string strPageId;		//页面ID
+		2 optional int iModType;			//模块类型
+		3 optional string strModDesc;		//模块描述
+		4 optional string strModParam;		//模块参数
+		5 optional int iOrder;				//顺序Id
+		6 optional vector<string> vecDefId;	//干预ID，商品ID或者IP ID
+		7 optional vector<STModExtData> vecExtData;	//模块图片内容
+		8 optional int iParamType;			//模块参数类型   1--Cat 2--Ip 3 --act
+		9 optional string strTitleUrl;		//标题的跳转链接
+		10 optional unsigned int uiModColor;		//模块配置底色，只用于主题3商品模块
+		11 optional unsigned int uiProdRow;			//商品行数
+		12 optional unsigned int uiProdCol;			//商品列数
+		13 optional string strJsModData;			//模块配置参数，json串形式，不同类型的模块有不同的配置，都转成json串存到这个字符串里面,新增的模块都使用这个字段
+		14 optional int iModGap;					//模块间隔
+		15 optional bool bShowName = true;					//是否显示名字
+	};
+	
+	//编辑模块，获取原有的模块配置数据
+	struct STGetModConfReq
+	{
+		0 optional string strModId;
+	};
+	
+	struct STGetModConfRsp
+	{
+		0 optional int iErrCode;
+		1 optional string strErrMsg;
+		2 optional STModConfData stModData;
+	};
+	
+	
+	//保存模块
+	struct STSaveModReq
+	{
+		0 optional STModConfData stModData;
+	};
+	
+	struct STSaveModRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional string strModId;			//返回新的模块ID
+	};
+	
+	
+	//发布时的模块数据
+	struct STModPubData
+	{
+		1 optional string strModId;
+		2 optional int iOrder;
+	};
+	
+	//页面发布
+	struct STPubPageReq
+	{
+		1 optional string strPageId;					//首页填“1”
+		2 optional vector<STModPubData> vecMod;
+	};
+	struct STPubPageRsp
+	{
+		0 optional int iErrCode;
+		1 optional string strErrMsg;
+	};
+	
+	
+	//回收站模块数据
+	struct STTrashModData
+	{
+		1 optional string strModId;
+		2 optional VmallPage::STModuleData stData;		//模块历史快照数据
+		3 optional int iDelTime;						//删除时间
+		4 optional string strPageId;					//货架ID
+	};
+	
+	
+	//删除模块，进回收站
+	struct STDelModReq
+	{
+		1 optional STTrashModData stMod;
+	};
+	
+	struct STDelModRsp
+	{
+		0 optional int iErrCode;
+		1 optional string strErrMsg;
+		2 optional int iTotal;
+	};
+	
+	enum EMPageType
+	{
+		E_PAGE_CONTEXT = 0x01,			//上下文翻页
+		E_PAGE_NUMBER = 0x02,			//页码翻页
+	};
+	
+	//读取回收站数据
+	struct STGetTrashReq
+	{
+		1 optional int iPageType;			//翻页方式，0x01 上下文翻页，0x02页码翻页
+		2 optional int iPageSize;
+		3 optional int iCurPage;
+		4 optional string strPageContext;
+		5 optional string strPageId;
+	};
+	
+	struct STGetTrashRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<STTrashModData> vecMod;
+		4 optional string strContext;
+		5 optional int iTotal;
+		6 optional bool bHasNext = false;
+	};
+	
+	
+	//从回收站删除
+	struct STDelTrashReq
+	{
+		1 optional string strModId;
+		2 optional string strPageId;
+	};
+	
+	struct STDelTrashRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional int iTotal;
+	};
+	
+	//从回收站恢复
+	struct STRecTrashReq
+	{
+		1 optional string strModId;
+	};
+	
+	struct STRecTrashRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional string strNewModId;				//恢复时返回一个新的模块ID
+		4 optional int iTotal;
+	};
+	
+	
+	//获取回收站总数
+	struct STGetTrashCntReq
+	{
+		1 optional int iType;
+		2 optional string strPageId;
+	};
+	
+	struct STGetTrashCntRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional int iTotal;
+	};
+	
+	enum EMPageMgrNotifyType
+	{
+		E_PAGE_PUBLISH = 100,				//页面发布
+	};
+	
+	
+	struct STPageMgrNotifyReq
+	{
+		1 optional int iType;						//对应EMPageMgrNotifyType
+		2 optional string strPageId;
+		3 optional vector<string> vecProdPool;
+	};
+	
+	
+};
+
+
+
+	
+	
+	
+	
+		
+	
+	
+	
+		

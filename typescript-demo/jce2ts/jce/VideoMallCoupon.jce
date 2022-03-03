@@ -1,0 +1,850 @@
+// created by anthonydeng 2018/3/27
+
+#include "VideoMallComm.jce"
+
+//测试L5：599873:3604480  
+//正式L5：897473:655360
+
+module CVideoMallCoupon{
+
+	enum ModuleCmd
+	{
+		//管理端协议
+        CMD_MNG_MODIFY_COUPON_BATCH = 0xf56c ,       //添加、修改优惠券批次
+        CMD_MNG_CHANGE_COUPON_BATCH_STATUS = 0xf55f, //审核、撤销审核、删除、失效
+        CMD_MNG_EDIT_PRODUCT = 0xf539,               //生效状态下修改优惠券适用商品ID，无需再次审核
+        CMD_MNG_INC_COUPON_NUM = 0xf53a,             //补制券，需要转入审核状态       
+        CMD_MNG_READ_COUPON_BATCH_LIST = 0xf53b,     //获取优惠券批次列表
+        CMD_MNG_READ_COUPON_BATCH_INFO = 0xf53c,     //获取某优惠券详细信息
+        CMD_MNG_READ_PRODUCT_COUPON = 0xf542, //管理端获取商品可用优惠券列表
+        CMD_MNG_GET_PRODUCT_COUPON = 0xf8a8,  //管理端获取商品可用优惠券列表(分页)
+        CMD_MNG_EXCLUDE_PRODUCT = 0xf924,  //指定商品不可使用指定批次优惠券
+        CMD_MNG_COUPON_TO_CDK = 0xfc97,   //根据优惠券号查询是哪个cdk兑换而来的
+
+	    CMD_MNG_ADD_COUPON_BATCH = 	0xf533,           //增加优惠券批次
+        CMD_MNG_EDIT_COUPON_BATCH = 0xf534,          //未生效状态下修改优惠券批次信息
+        CMD_MNG_AUDIT_COUPON_BATCH = 0xf535,         //审核优惠券批次
+        CMD_MNG_CANCEL_AUDIT_COUPON_BATCH = 0xf536,  //审核状态下撤销审核
+        CMD_MNG_DELETE_COUPON_BATCH = 0xf537,        //删除优惠券批次，隐藏不可见
+        CMD_MNG_INVALID_COUPON_BATCH = 	0xf538,       //使优惠券批次失效
+		
+        //用户端协议
+	    CMD_USER_GET_COUPON_SAFE = 0xfabd,     //领优惠券接口，加入安全机制
+        CMD_USER_READ_AVAILABLE_COUPON_LIST = 0xf53e, //获取订单可用优惠券列表
+        CMD_USER_CHECK_COUPON = 0xf53f,        //检查优惠券是否可使用
+        CMD_USER_USE_COUPON = 0xf540,          //使用优惠券
+        CMD_USER_RETURN_COUPON = 0xf541,       //退回优惠券
+        CMD_USER_READ_COUPON_LIST = 0xf543,    //获取用户优惠券列表
+        CMD_USER_READ_COUPON_INFO = 0xf544,    //获取某优惠券详情
+        CMD_USER_GET_QUALIFY_PRODUCT = 0xf58d, //筛选符合优惠券批次规则的商品
+        CMD_USER_GET_COUPON_NUM = 0xf595,      //获取用户可使用的优惠券数量
+        CMD_USER_GET_COUPON_BATCH_PRODUCT = 0xf596, //获取优惠券批次可用的商品
+        CMD_USER_BATCH_READ_COUPON_BATCH_INFO = 0xf597, //批量获取优惠券批次详情  (提供http接口给玲珑系统读取，C端读取，不鉴权；ady B端订单那里也用到了，后续增加字段需要更新cgi)
+        CMD_USER_BATCH_READ_COUPON_INFO = 0xf598, //批量获取优惠券详情
+        CMD_USER_READ_PRODUCT_COUPON = 0xf59d, //用户端获取商品优惠券列表
+        
+		CMD_USER_GET_COUPON = 0xf53d,          //发放优惠券 废弃
+
+        //CDK接口
+        CMD_CDK_GET_CDK = 0xf730,      //生成优惠券CDK
+        CMD_CDK_REDEEM_CDK = 0xf731,   //兑换优惠券CDK 
+        
+        //给搜索系统的接口
+        CMD_SEARCH_READ_COUPON_BATCH_LIST = 0xf545, //返回优惠券批次ID列表
+        CMD_SEARCH_READ_COUPON_BATCH_INFO = 0xf546, //返回优惠券批次详情中的条件信息，包括包含条件和排除条件
+        CMD_SEARCH_READ_PROD_POOL_COUPON_BATCH_LIST = 0xfa03,//返回商品池ID被哪些优惠券批次关联
+        
+        //中转命令字
+        CMD_VMALL_COUPON_STATUS_TRANSFER_TEST   = 0xf8b3,//优惠券中转测试环境
+        CMD_VMALL_COUPON_STATUS_TRANSFER_ONLINE = 0xf8b2,//优惠券中转正式环境
+
+        //给VIP的接口
+        CMD_VIP_GET_COUPON_BATCH_INFO = 0xf576, //查询优惠券批次详情，VIP使用
+	};
+
+	
+	enum ModuleErrCode
+	{
+		RT_SUC = 0,
+		RT_ERR_PACKET = 1001,
+		RT_INPUT_INVALID = 1002,
+		RT_SERVER_ERROR = 1003,
+		RT_ENCODE_RSP_PKG_FAIL = 1004,
+
+		//自定义错误码
+		EM_RT_QUERY_ROLE_CHECK_FAIL = 2001,      // 查询权限系统失败
+		EM_RT_ACTION_NOT_PERMITTED_ERR = 2002,   // 该用户无权限执行此操作
+		EM_RT_QUERY_NUM_ALLOC_FAIL = 2003,       // 查询放号系统失败
+		EM_RT_QUERY_MYSQL_FAIL = 2004,           // 数据库操作失败
+		EM_RT_QUERY_REDIS_FAIL = 2005,           // redis操作失败
+		EM_RT_COUPON_BATCH_NOT_FOUND = 2006,     // 优惠券批次不存在
+		EM_RT_COUPON_BATCH_NOT_IN_EDIT_AVAILABLE_STATUS = 2007, //优惠券批次是生效或者补制券或者失效状态，不能编辑
+		EM_RT_STATUS_CMD_NOT_FOUND = 2008,       // 状态动作未找到，无法执行操作
+		EM_RT_NOT_IN_AUDIT_STATUS = 2009,        // 不在审核状态，无法通过或者不通过审核或者取消审核
+		EM_RT_ONLINE_COUPON_CAN_NOT_DEL = 2010,  // 生效、失效、补制券状态的优惠券批次无法删除
+		EM_RT_NOT_IN_ONLINE_STATUS_ERR = 2011,   // 优惠券批次不是生效状态，不能单独添加商品
+		EM_RT_COUPON_BATCH_DELETED_CANNOT_READ = 2012, //不能读取已经删除的优惠券批次
+		EM_RT_NOT_IN_ONLINE_STATUS = 2013,       // 优惠券批次不是生效或者补制券状态
+		EM_RT_COUPON_BATCH_TIME_END = 2014,      // 优惠券批次有效期已过
+		EM_RT_COUPON_BATCH_OUT_OF_STOCK = 2015,  // 优惠券无剩余数量，无法领取
+		EM_RT_LIMIT_BATCH_DAY = 2016,            // 总领取次数已达到该批次每日上限，无法领取
+		EM_RT_LIMIT_USER_NUM = 2017,             // 用户领取次数已达到该批次每人上限，无法领取
+		EM_RT_LIMIT_USER_DAY_NUM = 2018,         // 用户领取次数已达到该批次每人每日上限，无法领取
+		EM_RT_WRITE_AB_QUEUE_FAIL = 2019,        // 写异常队列失败，系统错误
+		EM_RT_BATCH_RESEARCH_ITEM_FAIL = 2020,   // 批量反向查询搜索系统失败
+		EM_RT_COUPON_NOT_FOUND = 2021,           // 优惠券不存在
+		EM_RT_COUPON_ALREADY_USED = 2022,        // 优惠券已被使用，无法重复使用
+		EM_RT_NOT_IN_USE_TIME = 2023,            // 不在优惠券可使用时间区间，无法使用
+		EM_RT_RESEARCH_ITEM_FAIL = 2024,         // 反向查询搜索系统失败
+		EM_RT_COUPON_NOT_FOUND_IN_REDIS = 2025,  // Redis中查询不到优惠券信息
+		EM_RT_WRONG_AB_MSG_CMD = 2026,           // 错误异常队列消息命令字
+		EM_RT_QUERY_FREQ_CONTROL_FAIL = 2027,    // 查询频控系统失败
+		EM_RT_GET_COUPON_FREQ_CONTROL_LIMITED = 2028,  //用户短时间内领券次数超过频限系统限制
+		EM_RT_QUERY_USER_INFO_FAIL = 2029,       //查询用户权限系统失败
+		EM_RT_MUST_BE_VIP = 2030,                //必须是VIP
+		EM_RT_MUST_BE_NEW_CUSTOMER = 2031,       //必须是新用户
+		EM_RT_QUERY_CHECK_OPTION_FAIL = 2032,    // 查询搜索系统判断商品是否可用于优惠券批次失败
+		EM_RT_NO_PRODUCT_CAN_USE_THIS_COUPON = 2033, // 没有商品可用于这个优惠券，无法使用
+		EM_RT_SEND_TOUCHUP_FAIL = 2034,          //给触达系统发送消息失败
+		
+		EM_RT_ENCODE_CDK_FAIL = 2035,           //加密生成CDK失败
+		EM_RT_DECODE_CDK_FAIL = 2036,           //解密CDK信息失败
+		EM_RT_CDK_TIME_ERR = 2037,              //CDK里面的时间信息不对
+		EM_RT_CDK_ALREADY_REDEEM = 2038,        //CDK已经被兑换过了，无法兑换
+        
+        EM_RT_USER_NEED_LOGIN = 2039,           //用户未登录错误
+        
+        EM_RT_SYSTEM_ERR = 2040,                 //系统故障
+        EM_RT_QUERY_ACT_ERR = 2041,              //查询活动信息失败
+        EM_RT_COUPON_ORDER_ID_ERR = 2042,        //退优惠券的时候带的strOrderId和优惠券信息里面存储的不一致
+        EM_RT_GIVE_APPID_NOT_FOUND = 2043,       //发券接口appid未找到
+        EM_RT_GIVE_APPKEY_WRONG = 2044,          //发券接口appid对应的appkey不匹配
+        EM_RT_GIVE_INTERFACE_IP_NOT_PERMITED =2045, //发券接口IP鉴权失败
+        EM_RT_NOT_PERMITED_TO_GIVE_THIS_BATCH = 2046, //批次在发券接口黑名单中，无法通过这个接口发券
+        EM_RT_SECRET_NOT_RIGHT = 2050,          //密钥不对，无法领券
+        
+        EM_RT_VIP7_FREESHIPPING_ERR = 2051,       //VIP7默认全场包邮，领取包邮券失败时返回这个错误码
+		EM_RT_CHANNEL_ID_NOT_SAME = 2052,         //渠道ID不匹配
+        
+        EM_RT_LOGIN_TOKEN_CHECK_FAIL = 10000,   //登录票据校验失败
+		
+	};
+
+    enum  CouponType
+    {
+       CASH_COUPONS      = 1,         //现金券
+       FULL_CUT_COUPONS  = 2,         //满减券
+       FREE_SHIPPING_COUPONS = 3,     //免邮券
+       PERCENT_COUPONS = 4,           //折扣券
+       FREE_COUPONS = 5,              //免单券      
+    };
+
+    enum   CouponBatchStatus
+    {
+       STATUS_EDIT               = 1,  //编辑中
+       STATUS_AUDIT              = 2,  //审核中
+       STATUS_AUDIT_NOT_PASS     = 3,  //审核不通过
+       STATUS_EFFECTIVE          = 4,  //生效中
+       STATUS_INVALID            = 5,  //失效
+       STATUS_EXPIRED            = 6,  //已过期
+    };
+    
+    enum  CouponUseType  //商品适用范围
+    {
+       ALL_PRODUCT    = 1,    //全站商品
+       LIMIT_PRODUCT  = 2,    //部分商品
+       ACT_PRODUCT_POOL = 3,  //活动或者商品池
+    };  
+    
+    enum  CouponAuditAction  //优惠券批次审核命令
+    {
+       AUDIT_PASS = 0,  //审核通过
+       AUDIT_DROP = 1,  //审核不通过
+    };
+
+    enum   CouponStatusAction      //审核、撤销审核、删除、失效
+    {
+       STATUS_ACTION_AUDIT_PASS     = 1, //审核通过
+       STATUS_ACTION_AUDIT_DROP     = 2, //审核不通过
+       STATUS_ACTION_CANCEL_AUDIT   = 3, //撤销审核
+       STATUS_ACTION_DELETE         = 4, //删除优惠券批次
+       STATUS_ACTION_OFFLINE        = 5, //下线优惠券批次
+    };
+
+    enum  IdentityLimitType //领取和使用的身份限制条件
+    {
+       LIMIT_VIP            = 1,  //所有VIP用户可领
+       LIMIT_NEW_CUSTOMER   = 2,  //新用户
+       LIMIT_VIP1           = 3,  //VIP1可领
+       LIMIT_VIP2           = 4,  //VIP2可领
+       LIMIT_VIP3           = 5,  //VIP3可领    
+       LIMIT_VIP4           = 6,  //VIP4可领
+       LIMIT_VIP5           = 7,  //VIP5可领
+       LIMIT_VIP6           = 8,  //VIP6可领
+       LIMIT_VIP7           = 9,  //VIP7可领
+    };
+
+    enum ModifyCmd    //是增加还是修改
+    {
+       MODIFY_ADD    = 1,  //增加批次
+       MODIFY_EDIT   = 2,  //修改批次
+    };
+    
+    enum GiveType
+    {
+        GIVE_VMALL = 1,   //商城正常发券
+        GIVE_OTHER = 2,   //第三发放发券
+    };
+    
+    enum ExpireType
+    {
+        EXPIRE_FIXED = 0, //固定过期时间 
+        EXPIRE_FLOAT = 1, //浮动过期时间
+    };
+    
+	struct STRecvLimit
+	{
+	   1 require int iVipLevel;    //VIP等级：1-7
+	   2 require bool bLimitDay;   //为true是限制每天，为false不是
+	   3 require unsigned int uiLimit; //限制数量 
+	};
+	
+    struct STCouponBatchInfo
+    {
+      1   require string strCouponTitle;           //优惠券标题  10字以内
+      2   require string strCouponShortTitle;      //优惠券短标题 5字以内
+      3   require string strCouponContent;         //优惠券说明   30个字上限
+      4   require int    iCouponType;              //优惠券类型，参考CouponType枚举值
+      5   require unsigned int uiStartTime;        //优惠券有效期起始时间
+      6   require unsigned int uiEndTime;          //优惠券有效期结束时间
+      7   require unsigned int uiCouponNum;        //制券数量，必须大于0
+      8   require unsigned int uiStatus;           //优惠券状态，参考CouponBatchStatus枚举值
+      9   require int  dThreshold;                 //抵现门槛
+      10  require int  dDiscount;                  //可抵现金
+      11  require bool bHasIdentityLimit;          //是否有身份限制
+      12  require vector<unsigned int> vecIdentityLimit; //身份规则,参照IdentityLimitType取值
+      13  require unsigned int uiLimitUser;        //领取限制，每人能领取多少张，为0不限制
+      14  require bool    bLimitUserDaily;         //领取限制，每人领取张数限制为每天
+      15  require unsigned int uiLimitAllDaily;    //领取限制，该优惠券每天能领多少张，为0不限制
+      16  require unsigned int uiUseType;          //适用范围，全站或者部分商品，参考CouponUseType枚举值
+      17  optional vector<VideoMall::STConInfo> vecValidCondition;    //适用的条件   
+      18  optional vector<VideoMall::STConInfo> vecInvalidCondition;  //剔除的条件   
+      19  optional unsigned int uiIncNum;          //补制券数量,请求的时候不需要填写
+      20  optional string strCouponBatchId;        //优惠券批次ID，增加优惠券批次的时候不用填写   
+      21  optional unsigned int uiReceivedNum;     //已领取数量，请求的时候不用填写
+      22  optional unsigned int uiUsedNum;         //已使用数量，请求的时候不用填写
+      23  optional unsigned int uiGiveType;        //发券类型，参照GiveType取值
+      24  optional unsigned int uiCdkNum;          //CDK数量，请求的时候不用填写
+      25  optional unsigned int uiCdkRedeemNum;    //CDK兑换数量，请求的时候不用填写
+      //2018/8/28新增
+      26  optional int iExpireType;                //过期时间类型：0 固定过期时间; 1 动态过期时间，过期时间从领取时间开始算起 参见 ExpireType
+      27  optional int iExpireDayNum;              //单位：天。如果是动态过期时间，标识领取几天后过期
+      28  optional int iPercent;                   //折扣券折扣百分比，比如10%折扣填10
+      29  optional int iLimitProductNum;           //优惠券使用条件，为1则订单中仅限一件商品；为0则不限制
+      30  optional vector<string> vecProdPoolId;   //适用商品范围：商品池ID，目前只能填一个，使用数组方便后续扩展
+      31  optional string strSecret;               //优惠券批次密钥，系统自动生成
+      32  optional string strCouponType;           //优惠券类型文案
+	  33  optional vector<STRecvLimit> vecRecvLimit; //分VIP等级设置领取限制需要传入这个
+      34  optional string strChannelId;              //关联的渠道ID，为空不关联
+    };
+
+    struct STCouponBatchInfoForVip
+    {
+      1  require string strCouponBatchId;        //优惠券批次号
+      2  require unsigned int uiCouponNum;       //优惠券数量，必须大于0
+      3  require unsigned int uiGiveStartTime;   //发放开始时间
+      4  require unsigned int uiGiveEndTime;     //发放结束时间
+      5  require unsigned int uiUseStartTime;    //使用开始时间
+      6  require unsigned int uiUseEndTime;      //使用结束时间
+      7  require unsigned int uiStatus;          //状态，参见CouponBatchStatus枚举
+      8  require unsigned int uiCouponType;      //券类型，参见CouponType枚举
+      9  optional unsigned int uiLimitAllDaily;  //领取限制，该优惠券每天能领多少张，为0不限制
+      10 optional bool    bLimitUserDaily;       //领取限制，true uiLimitUser的含义是每人每天能领多少张， false uiLimitUser的含义是每人总共能领多少张
+      11 optional unsigned int uiLimitUser;      //领取限制，每人能领取多少张，为0不限制
+	  12 optional vector<STRecvLimit> vecRecvLimit; //分VIP等级设置领取限制
+    };
+    
+    // ---------- 请求和响应结构 ---------- //
+    
+    //----------------------------管理端接口----------------------------------//
+
+    //增加、修改优惠券批次请求与返回结构
+     struct STModifyCouponBatchReq
+    {
+      
+      1  require STCouponBatchInfo stCouponBatchInfo;  //优惠券详情：修改必填写优惠券批次ID，增加时不填写，ID由系统自动生成
+      2  require unsigned int uiCmd;                   //命令，标识是新增还是修改，参照ModifyCmd枚举值
+    };
+    
+    struct STModifyCouponBatchRsp
+    {
+	  1 require int iErrCode;					//业务错误码
+	  2 optional string strErrMsg;				//业务错误原因
+      3 optional string strCouponBatchId;       //返回优惠券批次ID
+    };   
+    
+    
+    //增加优惠券批次  请求与返回结构
+    struct STAddCouponBatchReq
+    {
+      
+      1  require STCouponBatchInfo stCouponBatchInfo;  //优惠券详情：不必填写优惠券批次ID，ID由系统自动生成
+    };
+    
+    struct STAddCouponBatchRsp
+    {
+	  1 require int iErrCode;					//业务错误码
+	  2 optional string strErrMsg;				//业务错误原因
+      3 optional string strCouponBatchId;       //返回优惠券批次ID
+    };
+    
+    //未生效状态下修改优惠券批次信息      请求与返回结构
+    struct STEditCouponBatchReq
+    {
+      1  require STCouponBatchInfo stCouponBatchInfo;  //优惠券详情：必须填写优惠券批次ID
+    };
+    
+    struct STEditCouponBatchRsp
+    {
+      1 require int iErrCode;					//业务错误码
+	  2 optional string strErrMsg;				//业务错误原因
+    };
+
+    //审核、撤销审核、删除、失效         请求与返回结构
+    struct STChangeCouponBatchStatusReq
+    {
+      1  require string     strCouponBatchId;          //优惠券批次ID 
+      2  require unsigned int uiStatusAction;          //动作,参照 CouponStatusAction的值
+    };
+    
+    struct STChangeCouponBatchStatusRsp
+    {
+      1 require int iErrCode;					//业务错误码
+	  2 optional string strErrMsg;				//业务错误原因    
+      3 optional unsigned int uiStatus;         //优惠券批次状态
+    };
+    
+    //审核  请求与返回结构
+    struct STAuditCouponBatchReq
+    {
+      1  require string     strCouponBatchId;          //优惠券批次ID 
+      2  require unsigned int uiCouponAuditAction;     //审核命令，通过或者不通过，参照CouponAuditAction枚举值
+    };
+    
+    struct STAuditCouponBatchRsp
+    {
+      1 require int iErrCode;					//业务错误码
+	  2 optional string strErrMsg;				//业务错误原因    
+    };
+    
+    //审核状态下撤销审核  请求与返回结构
+     struct STCancelAuditCouponBatchReq
+    {
+      1  require string     strCouponBatchId;          //优惠券批次ID 
+    };
+    
+    struct STCancelAuditCouponBatchRsp
+    {
+      1 require int iErrCode;					//业务错误码
+	  2 optional string strErrMsg;				//业务错误原因    
+    };   
+    
+    //删除优惠券批次  请求与返回结构
+    struct STDeleteCouponBatchReq
+    {
+      1  require string     strCouponBatchId;   //优惠券批次ID  
+    };
+    
+    struct STDeleteCouponBatchRsp
+    {
+      1 require int iErrCode;					//业务错误码
+	  2 optional string strErrMsg;				//业务错误原因     
+    };
+    
+    //下线失效优惠券批次  请求与返回结构
+    struct STInvalidCouponBatchReq
+    {
+      1  require string     strCouponBatchId;   //优惠券批次ID  
+    };
+    
+    struct STInvalidCouponBatchRsp
+    {
+      1 require int iErrCode;					//业务错误码
+	  2 optional string strErrMsg;				//业务错误原因     
+    };
+    
+    //生效状态下修改商品ID 请求与返回结构
+    struct STEditProductReq
+    {
+      1  require string  strCouponBatchId;                          //优惠券批次ID  
+      2  require unsigned int uiUseType;                            //适用范围，全站或者部分商品，参考CouponUseType枚举值
+      4  require vector<VideoMall::STConInfo> vecValidCondition;    //适用的条件   
+      5  require vector<VideoMall::STConInfo> vecInvalidCondition;  //剔除的条件
+      6  optional unsigned int uiGiveType;                          //发券类型，参照GiveType取值
+      7  optional vector<string> vecProdPoolId;                     //适用商品范围：商品池ID，目前只能填一个，使用数组方便后续扩展
+    };
+    
+    struct STEditProductRsp
+    {
+      1 require int iErrCode;					//业务错误码
+	  2 optional string strErrMsg;				//业务错误原因       
+    };  
+
+    //CMD_MNG_EXCLUDE_PRODUCT = 0xf924
+    //指定商品不可使用指定批次优惠券
+    struct STExcludeProductReq
+    {
+      1  require string  strCouponBatchId;           //优惠券批次ID  
+      2  optional vector<string> vecProductId;       //需要剔除的商品ID列表
+    };
+    struct STExcludeProductRsp
+    {
+      1 require int iErrCode;					//业务错误码
+	  2 optional string strErrMsg;				//业务错误原因    
+    };
+
+    //补制券       请求与返回结构
+    struct STIncCouponNumReq
+    {
+      1  require string  strCouponBatchId;             //优惠券批次ID  
+      2  require unsigned int uiIncNum;                //要增加的数量      
+    };
+    
+    struct STIncCouponNumRsp
+    {
+      1 require int iErrCode;					//业务错误码
+	  2 optional string strErrMsg;				//业务错误原因
+	  3 optional unsigned int uiStatus;         //优惠券批次状态
+    };    
+    
+    //获取优惠券批次列表   请求与返回结构
+    //分页返回，不返回已经删除的，创建时间排序
+    struct STReadCouponBatchListReq
+	{			
+      1 optional int iPageFlags;                        //翻页规则0x01：从新到旧 ;0x02:按页码翻页；0x03:生效中tab;0x04:失效tab      
+      2 optional unsigned int uiReqNum;					//翻页数量：前端传入一页请求的优惠券批次数
+	  3 optional unsigned int uiCurPage;				//当前页码
+	  4 optional string strPageContext;					//请求上下文，当选择从新到旧时，传入时间
+      5 optional map<string,string> mapCondition;       //筛选条件: name,status,id,type,channel_id
+	};
+    
+    struct STReadCouponBatchListRsp
+    {
+	  1 require int iErrCode;								                //业务错误码
+	  2 optional string strErrMsg;							                //业务错误原因
+	  3 optional vector<STCouponBatchInfo> vecCouponBatchInfo;	//优惠券批次列表
+	  4 optional bool bHasNextPage=false;						            //是否还有数据标志位
+	  5 optional string strPageContext;						                //请求上下文
+	  6 optional unsigned int uiPageNum;						            //总的页数      
+    };
+    
+    
+    //获取某优惠券批次详细信息  请求与返回结构
+    struct STReadCouponBatchInfoReq
+    {
+      1  require string  strCouponBatchId;             //优惠券批次ID         
+    };
+  
+    struct STReadCouponBatchInfoRsp
+    {
+      1 require int iErrCode;					       //业务错误码
+	  2 optional string strErrMsg;				       //业务错误原因     
+      3 optional STCouponBatchInfo stBatchInfo;        //优惠券批次详情
+      4 optional int iFlag;                            //是否返回secret信息      
+    };
+
+    
+    //CMD_MNG_GET_PRODUCT_COUPON = 0xf8a8,  //管理端获取商品可用优惠券列表(分页)  
+    
+    //B端获取商品可用优惠券列表  请求与返回结构
+    struct STMngGetProductCouponReq
+    {
+      1 require string strProductId;               //商品ID
+      2 optional int iPageFlags;                   //翻页规则0x01：按页码翻页
+      3 optional unsigned int uiReqNum;			   //翻页数量：前端传入一页请求的优惠券批次数
+	  4 optional unsigned int uiCurPage;		   //当前页码：从0开始
+	  5 optional string strPageContext;			   //请求上下文，占位，暂未使用
+      
+    };
+    
+    struct STMngGetProductCouponRsp
+    {
+      1 require int iErrCode;					          //业务错误码
+	  2 optional string strErrMsg;				          //业务错误原因        
+      3 optional vector<STCouponBatchInfo> vecBatchInfo;  //优惠券批次详情
+	  4 optional bool bHasNextPage=false;				  //是否还有数据标志位
+	  5 optional string strPageContext;					  //请求上下文
+	  6 optional unsigned int uiPageNum;			      //总的页数
+    };
+    
+    
+    //CMD_MNG_COUPON_TO_CDK = 0xfc97,   //根据优惠券号查询是哪个cdk兑换而来的
+    struct STCdkInfo
+    {
+        1 optional string strVuid;      //vuid字符串
+        2 optional string strCouponId;  //优惠券号字符串
+        3 optional string strCdk;       //CDK字符串
+    };
+    struct STMngCouponToCdkReq
+    {
+       1 optional vector<STCdkInfo> vecCdkInfo;
+    };
+    
+    struct STMngCouponToCdkRsp
+    {
+       1 require int iErrCode;					          //业务错误码
+	   2 optional string strErrMsg;				          //业务错误原因    
+       3 optional map<string, STCdkInfo> mapInfo;         //CDK信息，key是优惠券字符串+vuid字符串连接在一起，注意顺序       
+    };
+    
+    //----------------------------用户端接口----------------------------------//
+    
+    //发放优惠券    请求与返回结构
+    struct STGetCouponReq
+    {
+      1  require string  strCouponBatchId;             //优惠券批次ID
+      2  optional string strSecret;                    //优惠券批次密钥
+      3  optional string strAppId;                     //发券接口AppId
+      4  optional string strAppKey;                    //发券接口AppKey
+    };
+    
+    struct STGetCouponRsp
+    {
+      1 require int iErrCode;					//业务错误码
+	  2 optional string strErrMsg;				//业务错误原因    
+      3 optional string strCouponId;            //返回优惠券ID   
+      4 optional int  iStatus;                  //是否可以继续领取：0 可以继续领取；1 不可继续领取    
+      5 optional vector<unsigned int> vecIdentityLimit; //身份规则,参照IdentityLimitType取值      
+    };   
+    
+    //获取订单可用优惠券列表   请求与返回结构
+    struct STReadAvailableCouponListReq
+    {
+      1  require vector<string> vecProductId;     //商品ID 
+	  2  optional string strChannelId;            //渠道ID，为空不检查
+    };
+    
+    //给支付时用的结构 
+    struct STCouponInfo
+    {
+      1 require  VideoMall::STSaleInfo stInfo;
+      2 require  string  strCouponBatchId;
+      3 require  vector<string> vecCouponId;
+    };
+    
+    enum ReasonType
+    {
+       COUPON_EXIPIRE     = 1,  //已过期的优惠券ID
+       NO_PROD_CAN_USE    = 2,  //购买商品不参与满减的优惠券ID
+       BEFORE_START_TIME  = 3,  //还没到使用起始时间的优惠券ID
+       NOT_ALL_PROD_CAN_USE = 4, //折扣券、包邮券、免单券必须所有商品都可以使用
+	   CHANNEL_ID_NOT_SAME  = 5, //渠道ID不匹配
+    };
+    
+    struct STCouponAndReason
+    {
+      1 optional string strCouponId;  //优惠券ID与批次ID及优惠券
+      2 optional int iReason;         //不能使用原因 参见ReasonType
+      3 optional string strCouponBatchId;//对应的优惠券批次ID
+    };
+    
+    struct STReadAvailableCouponListRsp
+    {
+      1 require int iErrCode;					//业务错误码
+	  2 optional string strErrMsg;				//业务错误原因  
+      3 optional map<string , vector<STCouponInfo> > mapInfo;   //商品ID对应的优惠券列表信息
+      4 optional vector<STCouponAndReason> vecCouponAndReason;  //不能使用的优惠券及原因     
+    };   
+    
+    
+    //检查优惠券是否可使用    请求与返回结构
+    struct STCheckCouponReq
+    {
+      1  require string  strCouponId;             //优惠券ID     
+      2  require vector<string> strProductId;     //商品ID      
+    };
+    
+    struct STCheckCouponRsp
+    {
+      1 require int iErrCode;					//业务错误码
+	  2 optional string strErrMsg;				//业务错误原因   
+      3 optional unsigned int uiFlag;           //优惠券是否可使用: 0 不可使用； 1 可使用
+    };  
+    
+    //使用优惠券    请求与返回结构
+    struct STUseCouponReq
+    {
+      1  require string  strCouponId;             //优惠券ID  
+      2  require string  strOrderId;              //订单号   
+      3  require vector<string> vecProductId;     //商品ID 
+      4  optional string strChannelId;            //渠道ID
+    };
+    
+    struct STUseCouponRsp
+    {
+      1 require int iErrCode;					//业务错误码
+	  2 optional string strErrMsg;				//业务错误原因   
+    };   
+    
+    //退回优惠券    请求与返回结构
+    struct STReturnCouponReq
+    {
+      1  require string  strCouponId;             //优惠券ID  
+      2  require string  strOrderId;              //订单号
+    };
+    
+    struct STReturnCouponRsp
+    {
+      1 require int iErrCode;					//业务错误码
+	  2 optional string strErrMsg;				//业务错误原因      
+    };   
+    
+    //获取某优惠券详细信息  请求与返回结构
+    struct STReadCouponInfoReq
+    {
+      1  require string  strCouponId;                  //优惠券ID         
+    };
+  
+    struct STReadCouponInfoRsp
+    {
+      1 require int iErrCode;					       //业务错误码
+	  2 optional string strErrMsg;				       //业务错误原因        
+      3 optional STCouponBatchInfo stBatchInfo;        //优惠券批次详情
+      4 optional string strCouponId;                   //优惠券ID
+      5 optional unsigned int uiStatus;                //是否已使用 
+      //2018/8/28添加
+      6 optional unsigned int uiStartTime;   //有效期起始
+      7 optional unsigned int uiEndTime;     //有效期结束
+      8 optional int iDayToExpire;           //还剩几天过期      
+    };    
+    
+   
+    //获取用户优惠券列表 请求与返回结构
+    struct STReadCouponListReq
+    {
+      1  optional int iPageFlags;                      //翻页规则0x01：按未过期在前，已过期在后翻页; 0x02:未使用优惠券tab   0x03:已使用优惠券tab 0x04:已过期优惠券tab
+      2  optional int iReqNum;					       //翻页数量，选择按页码翻页时，前端传入一页请求的条数
+	  3  optional int iCurPage;					       //当前页码
+    };
+
+    struct STCoponAndBatch
+    {
+      1 require string stCouponId;       //优惠券ID
+      2 require string stCouponBatchId;  //优惠券批次ID
+      3 require unsigned int uiStatus;   //优惠券是否已使用：0 未使用   1已使用
+      4 require unsigned int uiIsExpired;//优惠券是否已过期：0 未过期 1已过期
+      //2018/8/28添加
+      5 optional unsigned int uiStartTime;   //有效期起始
+      6 optional unsigned int uiEndTime;     //有效期结束
+      7 optional int iDayToExpire;           //还剩几天过期
+    };
+    struct STReadCouponListRsp
+    {
+      1 require int iErrCode;					          //业务错误码
+	  2 optional string strErrMsg;				          //业务错误原因      
+	  3 optional vector<STCoponAndBatch> vecCouponAndBatch; //优惠券ID与批次ID及优惠券状态
+      4 optional map<string, STCouponBatchInfo> mapBatchInfo;  //优惠券批次详情
+      5 optional int iCurPage;                            //当前第几页从0开始计数
+      6 optional int iPageNum;                            //总的页数
+    };    
+
+    //获取用户可使用的优惠券数量
+    struct STReadUserCouponNumReq
+    {
+       1  require unsigned int uiType;  //类型： 0  获取用户可用优惠券数量
+    };
+
+    struct STReadUserCouponNumRsp
+    {
+      1 require int iErrCode;					          //业务错误码
+	  2 optional string strErrMsg;				          //业务错误原因  
+	  3 optional unsigned int uiCnt;                      //优惠券数量
+    };
+    //获取商品可用优惠券列表  请求与返回结构
+    struct STReadProductCouponReq
+    {
+      1 require string strProductId;               //商品ID
+	  2 optional string strChannelId;              //渠道ID，为空不检查
+    };
+    
+    struct STReadProductCouponRsp
+    {
+      1 require int iErrCode;					          //业务错误码
+	  2 optional string strErrMsg;				          //业务错误原因        
+      3 optional vector<STCouponBatchInfo> vecBatchInfo;  //优惠券批次详情
+      4 optional map<string, int> mapStatus;              //是否可领取: 0 可以领取    1 不可领取
+    };
+
+
+    //筛选符合优惠券批次规则的商品 请求与返回结构
+    struct STGetQualifyProductReq
+    {
+      1 require string  strCouponId;            //优惠券ID   
+      2 optional vector<string> vecProductId;   //商品ID列表
+    };
+
+    struct STGetQualifyProductRsp
+    {
+      1 require int iErrCode;					          //业务错误码
+	  2 optional string strErrMsg;				          //业务错误原因 
+	  3 optional vector<string> vecProductId;             //符合优惠券批次使用条件的商品ID列表
+    };
+
+    //获取优惠券批次可用的商品  请求与返回结构
+    struct STGetCouponBatchProductReq
+    {
+      1 require string strCouponBatchId;           //优惠券批次ID
+      2 optional int iPageFlags;                   //翻页规则0x01：上下文翻页 ;0x02:按页码翻页；
+      3 optional int iReqNum;					   //翻页数量，选择按页码翻页时，前端传入一页请求的条数
+	  4 optional int iCurPage;					   //当前页码
+	  5 optional string strContext;                //请求上下文
+    };
+    
+    struct STGetCouponBatchProductRsp
+    {
+	   0 require int iErrCode;                        //返回码
+	   1 require string strErrMsg;                    //出错的原因描述
+	   2 optional vector<string> vecIdList;           //返回ID列表
+	   3 optional string strContext;                  //请求上下文
+	   4 optional int iCurPage;                       //当前第几页从0开始计数
+	   5 optional int iPageNum;                       //总的页数
+    };
+
+    //批量获取优惠券批次详情  请求与返回结构
+    struct STBatchReadCouponBatchInfoReq
+    {
+       1  require vector<string>  vecCouponBatchId;             //优惠券批次ID  
+	   2  optional int iFlag;    //为1返回是否可领状态，为0不返回
+    };
+    struct STBatchReadCouponBatchInfoRsp
+    {
+      1 require int iErrCode;					       //业务错误码
+	  2 optional string strErrMsg;				       //业务错误原因      
+      3 optional map<string, STCouponBatchInfo> mapBatchInfo;        //优惠券批次详情 
+	  4 optional map<string, int> mapStatus;              //是否可领取: 0 可以领取    1 不可领取
+	  5 optional map<string, int> mapTodayNum;            //批次当日已领取数量
+    };
+
+    //批量获取优惠券详情  请求与返回结构
+    struct STBatchReadCouponInfoReq
+    {
+      1  require vector<string>  vecCouponId;                  //优惠券ID
+    };
+    
+    struct STBatchReadCouponInfoRsp
+    {
+      1 require int iErrCode;					          //业务错误码
+	  2 optional string strErrMsg;				          //业务错误原因      
+	  3 optional vector<STCoponAndBatch> vecCouponAndBatch;    //优惠券ID与批次ID及优惠券状态
+      4 optional map<string, STCouponBatchInfo> mapBatchInfo;  //优惠券批次详情
+    };  
+
+
+    //----------------------------CDK相关接口-------------------------------------------//
+    //CMD_CDK_GET_CDK = 0xf730,      //生成优惠券CDK    
+    struct STGetCdkReq
+    {
+      1 optional  string strCouponBatchId;    //优惠券批次ID
+      2 optional  int iReqNum;                //生成的CDK数量
+      3 optional  unsigned int uiCurIdx;      //当前编号，第一次请求填0；后续请求填上一次请求返回的
+      
+    };
+    struct STGetCdkRsp
+    {
+      1 require int iErrCode;				  //业务错误码
+	  2 optional string strErrMsg;			  //业务错误原因  
+	  3 optional unsigned int uiCurIdx;       //当前编号
+	  4 optional vector<string> vecCdk;       //生成的CDK
+
+    };
+
+    //CMD_CDK_REDEEM_CDK = 0xf731,  //兑换优惠券CDK 
+    struct STRedeemCdkReq
+    {
+       1 optional string strCdk;              //CDK字符串
+    };
+    struct STRedeemCdkRsp
+    {
+       1 require int iErrCode;				  //业务错误码
+	   2 optional string strErrMsg;			  //业务错误原因    
+       3 optional string strCouponId;         //返回优惠券ID         
+    };
+    
+    //----------------------------给搜索系统提供的接口----------------------------------//
+    //给搜索系统返回优惠券批次ID列表    请求与返回结构
+    struct STSearchReadCouponBatchListReq
+    {
+      1 require string strContext;		 //请求上下文
+      2 require unsigned int uiCnt;      //请求的优惠券批次ID数量
+    };
+   
+    struct STSearchReadCouponBatchListRsp
+    {
+      1 require int iErrCode;					          //业务错误码
+	  2 optional string strErrMsg;				          //业务错误原因  
+      3 optional vector<string> vecCouponBatchId;         //优惠券批次列表
+      4 optional string strContext;                       //请求上下文
+      5 optional bool bHasNextPage=false;			      //是否还有数据标志位      
+    };
+ 
+ 	//优惠券范围信息
+	struct STScopeInfo
+	{
+		1 optional int iType;				                //类型 1全部商品，2部分商品
+		2 optional vector<VideoMall::STConInfo> vecAddCon;		//参与条件
+		3 optional vector<VideoMall::STConInfo> vecDelCon;		//剔除条件
+	};
+ 
+    //给搜索系统返回优惠券批次详情中的条件信息，包括包含条件和排除条件    请求与返回结构
+    struct STSearchReadCouponBatchInfoReq
+    {
+      1  require string  strCouponBatchId;             //优惠券批次ID
+    };
+   
+    struct STSearchReadCouponBatchInfoRsp
+    {
+      1 require int iErrCode;					          //业务错误码
+	  2 optional string strErrMsg;				          //业务错误原因  
+      3 optional string  strCouponBatchId;                //优惠券批次ID
+      4 optional int iType;                               // 1 全站商品     2部分商品
+      5 optional vector<VideoMall::STConInfo>  vecValidItem;     //包含的
+      6 optional vector<VideoMall::STConInfo>  vecInValidItem;   //排除的
+	  7 optional vector<STScopeInfo> vecScopeInfo;     //优惠券条件,如果配置了子商品池，那么父商品池的也会加入这个里面
+    };
+    
+    //CMD_SEARCH_READ_PROD_POOL_COUPON_BATCH_LIST = 0xfa03,//返回商品池ID被哪些优惠券批次关联
+    struct STSearchReadProdPoolCouponBatchListReq
+    {
+       1 optional string strId; //Id值
+    };
+
+    struct STSearchReadProdPoolCouponBatchListRsp
+    {
+       1 require int iErrCode;					          //业务错误码
+	   2 optional string strErrMsg;				          //业务错误原因 
+       3 optional vector<string> vecId;                   //对应的优惠券批次ID
+    };
+    
+    //----------------------------给VIP提供的接口----------------------------------//
+    
+     //获取某优惠券批次详细信息给VIP使用        请求与返回结构
+    struct STReadCouponBatchInfoVipReq
+    {
+      1  require string  strCouponBatchId;             //优惠券批次ID         
+    };
+  
+    struct STReadCouponBatchInfoVipRsp
+    {
+      1 require int iErrCode;					       //业务错误码
+	  2 optional string strErrMsg;				       //业务错误原因     
+      3 optional STCouponBatchInfoForVip stBatchInfo;  //优惠券批次详情     
+    };
+    //*************************************中转消息************************************//
+    struct STCouponTransfer
+    {
+      1 optional string strCouponBatchId;     //优惠券批次ID
+      2 optional int iOper;                   //操作：1 审批通过   2 修改商品         3 过期
+    };
+
+};
+

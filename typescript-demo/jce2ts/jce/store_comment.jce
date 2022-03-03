@@ -1,0 +1,372 @@
+/*
+@brief:商品评论模块
+auth：bluentzhao
+time：2017.10.13
+*/
+module CStoreCommentPro
+{
+	/*
+	@brief:机器环境信息
+	//写协议
+	TestIp:10.133.8.78
+	TestPort:40962
+	TestL5:301249:6946816
+	OnlineL5:899265:131072
+	//读协议
+	TestIp:10.133.8.78
+	TestPort:40963
+	TestL5:301249:6881280
+	OnlineL5:899265:65536
+	*/
+	
+	enum ModuleCmd
+	{
+		//读协议
+		
+		CMD_READ_COMMENT_LIST = 0xf29b,
+		CMD_READ_COMMENT_DETAIL = 0xf29c,
+		CMD_READ_ORDERCMT_DETAIL = 0xf2a1,
+		CMD_READ_ORDERCMT_INFO = 0xf29d,
+		CMD_READ_UNCMTORDER_LIST = 0xf367,
+		CMD_READ_PRODUCTCMT_INFO = 0xf3dc,
+		//写协议
+		CMD_PUB_COMMENT = 0xf296,
+		CMD_PUB_REPLY = 0xf297,
+		CMD_PUB_LIKE = 0xf298,
+		CMD_DELETE_MSG = 0xf299,
+		CMD_REPORT_MSG = 0xf29a,
+		CMD_BATCH_PUB_COMMENT = 0xf358
+	};
+	
+	enum ModuleErrCode
+	{
+		RT_SUC = 0,
+		RT_ERR_PACKET = 1001,
+		RT_INPUT_INVALID = 1002,
+		RT_SERVER_ERROR = 1003,
+		RT_ENCODE_RSP_PKG_FAIL = 1004,
+		RT_READ_COMMENT_LIST_FAIL = 1005,
+		RT_READ_COMMENT_DETAIL_FAIL = 1006,
+		RT_PUB_COMMENT_FAIL = 1007,
+		RT_PUB_REPLY_FAIL = 1008,
+		RT_PUB_LIKE_FAIL = 1009,
+		RT_DELETE_MSG_FAIL = 1010,
+		RT_REPORT_MSG_FAIL = 1011,
+		RT_LIMIT_PUB_COMMENT = 1012,
+		RT_LIMIT_PUB_REPLY = 1013,
+		RT_READ_ORDERCMT_INFO_FAIL = 1014,
+		RT_READ_ORDERCMT_DETAIL_FAIL = 1015,
+		RT_USER_ORDER_FAIL = 1016,
+		RT_READ_UNCMTORDER_FAIL = 1017,
+		RT_READ_PRODUCTCMT_INFO_FAIL = 1018,
+	};
+	
+	enum CmtType
+	{
+		ALL_CMT 	= 1,
+		GOOD_CMT 	= 2,
+		MIDDLE_CMT 	= 3,
+		BAD_CMT		= 4,
+		PIC_CMT		= 5,
+	};
+	
+	enum ScoreType
+	{
+		DESC_TYPE = 1,			//描述评分类型
+		FLOW_TYPE = 2,			//物流评分类型
+		SEVICE_TYPE = 3,		//服务评分类型
+	};
+/***********************结构体定义*************************/
+	// ---------- 依赖的基础结构 ---------- //
+	
+	// 用户信息
+	struct STUserInfo
+	{
+		1 require long ddwUserId;							//用户id
+		2 optional string strNick;   						//用户的昵称
+		3 optional string strHead;   						//用户的头像
+		4 optional short sGender = 0;   					//性别,0:未定义,1:男,2:女
+	};
+	
+	struct STImageInfo
+	{
+		1   require string strImageUrl;					//图片的URL链接
+		2 	optional int iWidth; 
+		3	optional int iHeight;
+	};
+
+	struct STScoreInfo
+	{
+		1 require int iType;							//评分type，对应ScoreType的取值
+		2 require double dwScore;						//分值
+	};
+	
+	struct STBasicInfo
+	{
+		1 require long ddwMsgId;  							//消息id 
+		2 require long ddwUserId; 							//发表者id
+		3 require string strContent;						//主贴内容
+		4 optional vector<STImageInfo> vecImageList;		//图片列表
+		5 require unsigned int dwPubTime;					//发表时间
+		6 require unsigned int dwMsgType;					//消息类型，1：原创；8：评论；9：赞；
+		7 require unsigned int dwStatus;					//消息状态，取值待定义，比如删除状态等。0，待审核；1，通过；2，删除
+	};
+	
+	//评论消息详细信息
+	struct STMsgInfo
+	{
+		1 require STBasicInfo stBasicInfo;					//消息id 
+		2 require string strProductId;						//消息所属商品ID
+		3 optional unsigned int dwUpNum;					//点赞数
+		4 optional unsigned int dwCommentNum;				//评论数
+		5 optional long ddwParentMsgId;						//父节点消息id
+		6 optional long ddwParentUserId; 					//父节点用户id
+		7 optional long ddwRootMsgId;						//根节点消息id
+		8 optional long ddwRootUserId; 						//根节点用户id
+		9 optional unsigned int dwMsgFlags;					//消息标志位，0x01：商家发表；
+		10 optional unsigned int dwOpFlags;					//操作标志位，0x01：加精；0x02：置顶；0x04：下沉
+		11 optional unsigned byte cFeedType;				//原创消息类型,0-普通feed;1：追评
+		12 optional vector<STBasicInfo> vecMsgInfo;			//用户追加评论信息
+		13 optional vector<STScoreInfo> vecScoreInfo;		//评分信息
+		14 optional string strOrderId;						//消息所属商品订单id
+		15 optional unsigned byte cPubType;					//发表类型，0：非匿名发表；1：匿名发表
+		16 optional string strSkuId;						//商品的skuid
+		17 optional string strFlowOrderId;					//消息所属物流订单id
+	};
+	
+	struct STPubCommentInfo
+	{
+		1 require string strOrderId;						//商品订单id
+		2 require string strProductId;						//商品id
+		3 require string strSkuId;							//商品SKU id
+		4 require string strContent;						//评论内容
+		5 optional vector<STImageInfo> vecImageInfo;
+		6 optional vector<STScoreInfo> vecScoreInfo;
+		7 require unsigned byte cPubType;					//发表类型，0：非匿名发表；1：匿名发表
+	};
+	
+	struct STProductCmtInfo
+	{
+		1 require long ddwAllCommentCnt;
+		2 require long ddwGoodCommentCnt;
+		3 require long ddwMiddleCommentCnt;
+		4 require long ddwBadCommentCnt;
+		5 require long ddwPicCommentCnt;
+	};
+	// ---------- 请求和响应结构 ---------- //
+	
+	// 读评论列表 请求与返回结构
+	struct STReadCommentListReq
+	{			
+		1 require string strProductId;						//商品id		
+		2 optional unsigned short wPageFlags;				//翻页规则，0x01：从新到旧 ;0x02:从好评到差评；0x04:按页码翻页；
+		3 optional unsigned byte cCmtType;					//读取的评论类型,参考CmtType的枚举值
+		4 optional unsigned int dwReqNum;					//翻页数量，选择按页码翻页时，前端传入一页请求的评论条数
+		5 optional unsigned int dwCurPage;					//当前页码
+		6 optional string strPageContext;					//请求上下文
+	};
+	  
+	struct STReadCommentListRsp
+	{
+		1 require int iErrCode;									//业务错误码
+		2 optional string strErrMsg;							//业务错误原因
+		3 optional vector<STMsgInfo> vecMsgInfo;				//主贴列表
+		4 optional map<long, STUserInfo> mapUserInfo;			//涉及到的用户详情
+		5 optional map<long,vector<STMsgInfo> > mapMsgInfo;		//商家回复评论列表
+		6 optional bool bHasNextPage=false;						//是否还有数据标志位
+		7 optional string strPageContext;						//请求上下文
+		8 optional unsigned int dwPageNum;						//总的页数
+        9 optional STProductCmtInfo stCmtInfo;                  //商品评论计数信息
+	};
+	
+	// 读评论详情 请求与返回结构
+	struct STReadCommentDetailReq
+	{			
+		1 require long ddwMsgId;							//消息id		
+		2 optional unsigned short wPageFlags;				//翻页规则，0x01：从新到旧 ;0x04:按页码翻页；
+		3 optional unsigned int dwReqNum;					//翻页数量，选择按页码翻页时，前端传入一页请求的评论条数
+		4 optional unsigned int dwCurPage;					//当前页码
+		5 optional string strPageContext;					//请求上下文
+	};
+	
+	struct STReadCommentDetailRsp
+	{
+		1 require int iErrCode;								//业务错误码
+		2 optional string strErrMsg;						//业务错误原因
+		3 optional STMsgInfo stMsgInfo;						//主贴信息
+		4 optional vector<STMsgInfo> vecMsgInfo;			//回复列表
+		5 optional map<long, STUserInfo> mapUserInfo;		//涉及到的用户详情
+		6 optional map<long, STMsgInfo> mapParentMsgInfo;	//涉及到的被评论消息的详情
+		7 optional bool bHasNextPage=false;					//是否还有数据标志位
+		8 optional string strPageContext;					//请求上下文
+		9 optional unsigned int dwPageNum;					//总的页数
+	};
+	
+	// 读订单相关评论详情 请求与返回结构
+	struct STReadOrderCmtDetailReq
+	{			
+		1 require string strOrderId;						//订单id		
+		2 optional unsigned short wPageFlags;				//翻页规则，0x01：从新到旧
+		3 optional unsigned int dwReqNum;					//翻页数量，选择按页码翻页时，前端传入一页请求的评论条数
+		4 optional string strPageContext;					//请求上下文
+	};
+	
+	struct STReadOrderCmtDetailRsp
+	{
+		1 require int iErrCode;								//业务错误码
+		2 optional string strErrMsg;						//业务错误原因
+		3 optional vector<STMsgInfo> vecMsgInfo;			//评论列表
+		4 optional map<long, vector<STMsgInfo> > mapMsgInfo;//评论对应的回复列表
+		5 optional map<long, STUserInfo> mapUserInfo;		//涉及到的用户详情
+		6 optional bool bHasNextPage=false;					//是否还有数据标志位
+		7 optional string strPageContext;					//请求上下文
+	};
+	
+	struct STReadUnCmtOrderListReq
+	{
+		1 optional unsigned short wPageFlags;				//翻页规则，0x01：从新到旧 ;0x04:按页码翻页；
+		2 optional unsigned int dwReqNum;					//翻页数量，选择按页码翻页时，前端传入一页请求的评论条数
+		3 optional unsigned int dwCurPage;					//当前页码
+		4 optional string strPageContext;					//请求上下文
+	};
+	
+	struct STReadUnCmtOrderListRsp
+	{
+		1 require int iErrCode;									//业务错误码
+		2 optional string strErrMsg;							//业务错误原因
+		3 optional vector<string> vecFlowOrderId;				//物流订单id列表
+		6 optional bool bHasNextPage=false;						//是否还有数据标志位
+		7 optional string strPageContext;						//请求上下文
+		8 optional unsigned int dwPageNum;						//总的页数
+	};
+	
+	// 批量读订单相关评论信息 请求与返回结构
+	struct STReadOrderCmtInfoReq
+	{			
+		1 require vector<string> vecOrderId;						//订单id		
+	};
+	
+	struct STReadOrderCmtInfoRsp
+	{
+		1 require int iErrCode;									//业务错误码
+		2 optional string strErrMsg;							//业务错误原因
+		3 optional map<string,vector<STMsgInfo> > mapMsgInfo;   //评论列表
+	};
+	
+	struct STReadProductCmtInfoReq
+	{
+		1 require vector<string> vecProductId;						//商品id
+	};
+	
+	struct STReadProductCmtInfoRsp
+	{
+		1 require int iErrCode;										//业务错误码
+		2 optional string strErrMsg;								//业务错误原因
+		3 optional map<string,STProductCmtInfo> mapProductCmtInfo;  //评论列表
+	};
+	
+	//发表评论 请求与返回结构
+	struct STPubCommentReq
+	{
+		1 require string strProductId;
+		2 require string strOrderId;
+		3 require string strContent;
+		4 optional vector<STImageInfo> vecImageInfo;
+		5 optional vector<STScoreInfo> vecScoreInfo;
+		6 require unsigned byte cType;						//0、首次评论；1、追评
+		7 require string strSeq;							//防重seq
+		8 require unsigned byte cPubType;					//发表类型，0：非匿名发表；1：匿名发表
+		9 optional string strSkuId;							//skuid
+		10 require unsigned byte cUserType;					//0,普通用户；1,商家
+		11 require string strFlowOrderId;	
+		
+	};
+	
+	struct STPubCommentRsp
+	{
+		1 require int iErrCode;								//业务错误码
+		2 optional string strErrMsg;						//业务错误原因
+		3 optional long ddwMsgId;
+	};
+		
+	struct STBatchPubCommentReq
+	{
+		1 require string strFlowOrderId;								//物流订单id
+		2 require vector<STPubCommentInfo> vecPubCommentInfo;			//批量发表的评论信息
+		3 require vector<STScoreInfo> vecScoreInfo;
+		4 require string strSeq;										//防重seq
+		5 require unsigned byte cUserType;								//0,普通用户；1,商家
+		
+	};
+	
+	struct STBatchPubCommentRsp
+	{
+		1 require int iErrCode;								//业务错误码
+		2 optional string strErrMsg;						//业务错误原因
+	};
+	
+	//发表回复 请求与返回结构
+	struct STPubReplyReq
+	{
+		1 require string strProductId;
+		2 require long ddwMsgId;
+		3 require string strContent;
+		4 require unsigned byte cType;						//0：普通用户回复；1：商家回复
+		5 optional string strOrderId;						//商家回复，需要带上订单ID   
+		6 require string strSeq;							//防重seq
+		7 optional string strSkuId;							//商品的SKUID
+	};
+	
+	struct STPubReplyRsp
+	{
+		1 require int iErrCode;								//业务错误码
+		2 optional string strErrMsg;						//业务错误原因
+		3 optional long ddwMsgId;
+	};
+	
+	//发表赞 请求与返回结构
+	struct STPubLikeReq
+	{
+		1 require string strProductId;
+		2 require long ddwMsgId;
+		3 require unsigned byte cType; 					//快评类型，1：赞
+		4 require unsigned byte cValue; 				//1：表示赞；2：表示取消赞；
+		5 require string strSeq;						//防重seq
+	};
+	
+	struct STPubLikeRsp
+	{
+		1 require int iErrCode;								//业务错误码
+		2 optional string strErrMsg;						//业务错误原因
+		3 optional long ddwMsgId;
+	};
+	
+	//删除消息 请求与返回结构
+	struct STDeleteMsgReq
+	{
+		1 require long ddwMsgId;
+		2 require unsigned byte cType;						//0:删除消息；1：审核不通过；2：审核通过；
+		3 require string strSeq;							//防重seq
+	};
+	
+	struct STDeleteMsgRsp
+	{
+		1 require int iErrCode;								//业务错误码
+		2 optional string strErrMsg;						//业务错误原因
+	};	
+
+	//举报消息 请求与返回结构
+	struct STReportMsgReq
+	{
+		1 require long ddwMsgId;
+		2 require string strSeq;							//防重seq
+		3 require unsigned byte cType;						//举报类型
+		4 require string strDesc;							//举报描述
+	};
+	
+	struct STReportMsgRsp
+	{
+		1 require int iErrCode;								//业务错误码
+		2 optional string strErrMsg;						//业务错误原因
+	};	
+};

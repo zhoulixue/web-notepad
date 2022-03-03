@@ -1,0 +1,261 @@
+module VideoMall{
+    
+    /*读测试:
+    IP:10.49.123.228:21574
+    L5:599873:4325376
+    */
+	enum CMD_SAHRE_COUPON
+    {
+           CMD_GET_SHARE_COUPON_REQ = 0xf660,                       //尝试获取优惠券
+		   CMD_GET_SHARE_COUPON_LIST_REQ = 0xf661,              //查询分享列表
+           CMD_GET_PAY_SHARE_INFO_REQ = 0xf662,                          //C端获取分享活动信息
+
+		   CMD_GET_COUPON_PACKAGE_REQ = 0xfab8,                  //C端尝试获取优惠券包
+           CMD_READ_COUPON_PACKAGE_REQ = 0xfab9,                //C端获取活动劵包信息
+
+		   CMD_GET_SHARE_INFO_REQ_B = 0xf67a,                         //B端查询分享活动信息
+           CMD_MODIFY_SHARE_INFO_REQ = 0xf663,                      //修改分享活动信息
+		   CMD_CREATE_SHARE_INFO_REQ = 0xfba5, 						//创建分享活动
+           CMD_CHANGE_SHARE_ACT_STATUS = 0xf664,                 //上下架分享活动
+		   CMD_READ_SHARE_INFO_LIST = 0xfb99, 						//查询弹窗活动列表
+    };
+    
+    
+
+	enum LOGIC_CODE
+	{
+		LCODE_SUC = 0, 					//首次领取成功
+		LCODE_RECEIVED = 1,           //已领取
+		LCODE_EMPTY  = 2,               //已领光
+        LCODE_FAILED = 3,               //领取失败
+	};
+    
+    struct STCouponBatchInfo                                                    //涉及的优惠券批次信息
+    {
+        0   require int iIncId;                                                       //自增ID
+        1   optional string strCouponBatchId;                               //优惠券批次ID
+        2   optional string strCouponTitle;                                 //优惠券标题10字以内
+        3   optional string strCouponShortTitle;                            //优惠券短标题5字以内
+        4   optional int iCouponType;                                       //优惠券类型，参考CouponType枚举值
+        5   optional unsigned int uiStartTime;                              //优惠券有效期起始时间
+        6   optional unsigned int uiEndTime;                                //优惠券有效期结束时间
+        7   optional int iGiveNum;                                          //赠送数量
+        8   optional bool bHasIdentityLimit;                                //是否有身份限制
+        9   optional vector<unsigned int> vecIdentityLimit;          		//身份规则,参照分享券的IdentityLimitType取值
+		10 	optional int dDiscount;
+		11 	optional int dThreshold;
+		12 	optional string strCouponContent;
+		13 	optional unsigned int uiLimitUser;								 //领取限制，每人能领取多少张，为0不限制
+		14 	optional unsigned int uiLimitAllDaily;							 //领取限制，该优惠券每天能领多少张，为0不限制
+		15  optional int iExpireType; 											 //过期时间类型：0固定过期，1动态过期时间
+		16  optional int iExpireDayNum; 										 //单位：天。如果是动态过期时间，标识领取几天后过期
+		17  optional int iPercent;                   //折扣券折扣百分比，比如10%折扣填10
+    };
+    
+    
+    struct STShareUserInfo                                                       //分享用户信息
+    {
+		0 optional string strUserId;                                            //用户ID
+        1 optional string strNick; 												
+        2 optional string strAvatar; 											
+        3 optional STCouponBatchInfo stCouponBatchInfo; 						
+		4 optional long ddwReceiveShareTime; 				 					//领取时间
+    };
+    
+    struct STShareActInfo                                                         //分享活动信息
+    {
+        0 optional string strShareActId;                                     	 //分享活动ID
+        1 optional string strShareDesc;                                     	 //分享活动描述
+        2 optional string strShareImg;                                   		 //分享活动图片
+        3 optional unsigned int uiStatus;                                		 //活动状态
+        4 optional int iIdLimit;                                                 //身份限制（暂时没用，前端实现）
+        5 optional int iGiveLimit;                                               //领取限制（暂时没用，前端实现）
+		6 optional int iTotalCoupon; 											 //总可领取量
+		7 optional int iTotalDiscount;                                          //总抵扣值
+	    8 optional string strBeginTime;                                       //开始时间
+	    9 optional string strEndTime;                                          //结束时间
+		10 optional int iShareType; 												//任务类型
+    };
+    
+    //C端接口
+    //根据支付订单ID获取分享优惠券
+    struct STGetShareCouponReq
+    {
+        0 require string strPayOrderId;                                         //购买的支付流水ID
+        1 optional int iAdPositionId;                                              //好莱坞分配的推广位ID
+        2 optional int iPlatform;
+    };
+    
+    struct STGetShareCouponRsp
+    {
+        0 require int iErrCode;                                                        //服务返回码
+        1 require string strErrMsg;                                                  //出错的原因描述
+        2 optional STCouponBatchInfo stCouponBatchInfo;             //获得的优惠券批次信息
+        3 optional int iLogicCode;                                                   //业务逻辑返回码
+    };
+    
+    //根据支付订单ID分享获得的优惠券列表
+    struct STGetShareCouponListReq
+    {
+        0 require string strPayOrderId;                                         //购买的支付流水ID
+    };
+    
+    struct STGetShareCouponListRsp
+    {
+        0 require int iErrCode;                                                        //服务返回码
+        1 require string strErrMsg;                                                  //出错的原因描述
+        2 optional vector<STShareUserInfo> vecShareUserInfo;     //获得已发放优惠券列表
+    };
+    
+	
+
+	//根据活动ID（逐渐废弃）或推广位ID，尝试获取优惠券包
+    struct STGetCouponPackageReq
+    {
+        0 require string strActId; 													//活动ID
+        1 optional int iAdPositionId;  												//推广位ID
+        2 optional int iPlatform;
+    };
+
+ 	struct STGetCouponPackageRsp
+    {
+        0 require int iErrCode;                                                      //返回码
+        1 require string strErrMsg;                                                  //出错的原因描述
+		2 optional int iLogicCode; 													 //逻辑错误码
+    };
+    
+    //根据活动ID（逐渐废弃）或推广位ID，读取优惠券包信息
+    struct STReadCouponPackageReq
+    {
+        0 require string strActId; 													//活动ID
+		1 optional int iAdPositionId;  												//推广位ID
+        2 optional int iPlatform;
+    };
+
+	//Src字段名：重新定义
+	
+    struct STReadCouponPackageRsp
+    {
+        0 require int iErrCode;                                                                           //返回码
+        1 require string strErrMsg;                                                                     //出错的原因描述
+        2 optional map<string, string> mapSrcInfo;   			                                //劵包相关资源信息
+        3 optional vector<STCouponBatchInfo> vecCouponBatch;						//涉及的优惠券批次信息
+    };
+    
+    
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //以下接口均已废弃
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    enum CODE_SHARE_OPERATION            //分享活动操作码
+    {
+        SOP_UP = 101, 						  //分享活动上线
+        SOP_DONW = 102,                          //分享活动下线
+    };
+    
+    enum CODE_SHARE_COUPON_OPERATION            //分享活动操作码
+    {
+        COP_CREATE = 201, 						  //新增分享优惠券
+        COP_UPDATE = 202,                       //修改分享优惠券
+        COP_DELETE = 203,                       //删除分享优惠券
+    };
+    
+    enum BIT_IDENTITY_LIMIT
+    {
+        ILMT_NONE = 0x1,                        //全部无身份限制
+    };
+    
+    enum BIT_GIVE_LIMIT
+    {
+        GLMT_NONE = 0x1,                       //全部无领取限制
+    };
+    
+    enum STATUS_SHARE_ACT                     //分享活动状态
+    {
+        SST_ONLINE = 1,                 //上架
+        SST_OFFLINE = 2,                //下架
+    };
+    
+    //根据支付ID，获取分享活动信息（已废弃）
+    struct STGetPayShareInfoReq
+    {
+        0 require string strPayOrderId;
+    };
+    
+    struct STGetPayShareInfoRsp
+    {
+        0 require int iErrCode;                                                        //返回码
+        1 require string strErrMsg;                                                  //出错的原因描述
+        2 optional STShareActInfo stShareActInfo;                          //分享信息
+        3 optional vector<STCouponBatchInfo> vecCouponBatch;  //涉及的优惠券批次信息
+    };
+    //B端接口
+    //根据分享活动ID，获取分享活动信息
+    struct STGetShareInfoReq
+    {
+        0 require string strShareActId;
+    };
+    
+    struct STGetShareInfoRsp
+    {
+        0 require int iErrCode;                                                        //返回码
+        1 require string strErrMsg;                                                  //出错的原因描述
+        2 optional STShareActInfo stShareActInfo;                          //分享信息
+        3 optional vector<STCouponBatchInfo> vecCouponBatch;  //涉及的优惠券批次信息
+		4 optional map<string, string> mapSrcInfo;   			          //劵包相关资源信息
+		5 optional vector<string> vecColorGroup;                                                //参考色值组
+    };
+
+	//获取分享活动列表
+    struct STGetShareListReq
+    {
+        0 require unsigned int uiPageNum;
+		1 require unsigned int uiPageSize;
+    };
+    
+    struct STGetShareListRsp
+    {
+        0 require int iErrCode;                                                        //返回码
+        1 require string strErrMsg;                                                  //出错的原因描述
+        2 optional vector<STShareActInfo> vecShareActInfo;                          //弹窗活动列表
+		3 optional int iTotalCount; 												//总数
+    };
+    
+    
+    struct STCouponBatchOpInfo                                                    //涉及的优惠券批次操作信息
+    {
+        0   require int iIncId;                                                       //自增ID
+        1   optional string strCouponBatchId;                                //优惠券批次ID
+        2   optional int iGiveNum;                                                //赠送数量限制
+        3   optional unsigned int uiOperation;                                    //操作
+		4 	optional int dDiscount; 									  //抵扣值（分）
+    };
+    
+    //根据分享活动ID，修改分享活动信息
+    struct STModifyShareInfoReq
+    {
+        0 require string strShareActId;
+        1 optional STShareActInfo stShareActInfo;                                                         //分享信息
+        3 optional vector<STCouponBatchOpInfo> vecCouponBatchOpInfo;                     //包含的优惠券操作信息
+		4 optional map<string, string> mapSrcInfo;
+    };
+    
+    struct STModifyShareInfoRsp
+    {
+        0 require int iErrCode;                                                        //返回码
+        1 require string strErrMsg;                                                  //出错的原因描述
+    };
+    
+    //上下架优惠券分享活动
+    struct STChangeShareActStatusReq
+    {
+        0 require string strShareActId;                                            //分享活动ID
+        1 optional unsigned int uiOperation;                                                     //操作
+    };
+    
+    struct STChangeShareActStatusRsp
+    {
+        0 require int iErrCode;                                                        //返回码
+        1 require string strErrMsg;                                                  //出错的原因描述
+    };
+};

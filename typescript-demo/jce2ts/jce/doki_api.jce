@@ -1,0 +1,86 @@
+/*
+@brief: doki api接口协议
+auth：beepeng
+time：2018.03.29
+*/
+
+module jce
+{
+ 	/*
+	@brief:机器环境信息
+	测试L5:    879425:65536  
+	测试IP:    10.175.108.238:20177
+	线上L5:    891841:65536
+	*/
+	
+	enum ECmd
+	{
+		CMD_GET_DOKI_INFO        = 0xf52d,   // 读取doki信息
+	};
+	
+	enum EGetType
+	{
+		E_GET_BY_DOKIID        = 1,  //读取单个doki id的信息
+		E_GET_BY_VID           = 2,  //web端根据vid的相关人员信息 读取doki列表信息
+		E_GET_BY_ACTIVITY      = 3,  //读取该活动所有选手列表信息
+	};	
+	
+	// doki头像信息
+    struct stDokiImgInfo
+	{
+		0 optional  string  strHeadImg;   //头图
+        1 optional	string  strBackImg;   //背景图
+		2 optional  string  strColorImg;  //抠图
+	};
+	
+	// ----------------------------------------------
+	// mpExtData -- 扩展参数注释
+	
+	// 101活动
+	// 分组信息 - Group
+	// 淘汰状态 - PlayerStat
+	// 个性签名 - Siga
+	// 介绍视频竖版 - VVid
+    // 卡片竖图 - VPic
+	// 卡片标签 - Label
+	// 是否封票期 - CanVote - 值0：否 值1：是
+	// 上期排名 - LastRank
+	// 上上期排名 - LLastRank
+	// 是否投票 - VoteStat - 值0：否  值1: 是 
+	
+	// 其它活动
+	// ----------------------------------------------
+	
+	// doki信息
+	struct stDokiInfo
+	{
+		0 require long lDokiid;                  //dokiid
+		1 optional long lStarId;                 //明星ID, 非可见明星，譬如剧集doki, dokiid等于star id
+		2 require int  iCategory;                //doki类别  0:明星  1:剧集 2:兴趣
+		3 optional stDokiImgInfo   stImgInfo;    //doki头像信息
+		4 optional string strName;               //doki名称，剧集名称
+		5 optional long  lFansNum;               //粉丝数
+		6 optional byte bFlwStat;                //关注状态 0 - 未关注  1 - 已关注
+		
+		7 optional map<string, string> mpExtData;  //扩展信息 - 对活动中的doki而言，存在额外的配置信息
+	}; 
+
+	struct stGetDokiInfoReq
+	{
+	    0 require byte   bGetType;       //获取类型
+		1 optional string strDokiid;     //
+		2 optional string strVid;        //
+		3 optional int    iActivityId;   //活动id，101活动 - 101， 用于扩展数据拉取或选手列表读取
+		4 optional byte   bGetExt;       //是否读取扩展数据 0：不获取； 1：获取，此时 iActivityId 必须填写 
+		                                 // - 不同活动类型 获取不同扩展信息
+		5 require  byte   bFrom;         //1: web 2: h5
+	};		
+	
+	//  
+	struct stGetDokiInfoRsp
+	{
+		0 optional int errCode;
+		1 optional vector<stDokiInfo> vecDokiList; //doki 列表信息
+	};
+};
+ 

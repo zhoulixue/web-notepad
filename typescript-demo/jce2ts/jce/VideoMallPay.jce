@@ -1,0 +1,456 @@
+#include "VideoMallPayCommon.jce"
+/**
+ * 1、结算、下单L5
+ * test:64366145:131072
+ * online:897537 65536
+ * 秒杀online：
+ * 2、支付相关
+ * test:64366145 65536
+ * online:897537 131072
+ */
+module VideoMall
+{
+	//交易中心命令号
+	enum emPayCenterCmd
+	{
+		EM_PAY_CENTER_CMD_PLACE_ORDER = 0xf287,	//下单
+		EM_PAY_CENTER_CMD_PAY = 0xf289,			//发起支付
+		EM_PAY_CENTER_CMD_PAY_NOTIFY = 0xf28a, //页面支付回调通知
+		EM_PAY_CENTER_CMD_DELIVERY_NOTIFY = 0xf28b, //发货回调通知
+		EM_PAY_CENTER_CMD_PLACE_ORDER_ABNORMAL = 0xf15,
+		EM_PAY_CENTER_CMD_PAY_ABNORMAL = 0xf16,
+		EM_PAY_CENTER_CMD_REFUND = 0xf28c,	//退款
+		EM_PAY_CENTER_CMD_REFUND_ABNORMAL = 0xf18,
+		EM_PAY_CENTER_CMD_REFUND_ORDER_CHECK = 0xf28e, // 退款中订单退款结果校验
+		EM_PAY_CENTER_CMD_CANCEL_PAY_ORDER = 0xf28d, //取消待支付订单
+		EM_PAY_CENTER_CMD_PAY_ORDER_TIMEOUT = 0xf28f, //支付中订单状态超时
+		EM_PAY_CENTER_CMD_BALANCE = 0xf398,//结算
+		EM_PAY_CENTER_CMD_TRANSFER = 0xf681, //额外退款转账
+		EM_PAY_CENTER_CMD_DELIVERY_TRANSFER_TEST = 0xf745, //测试环境发货中转
+		EM_PAY_CENTER_CMD_DELIVERY_TRANSFER = 0xf746, //正式环境发货中转
+		EM_PAY_CENTER_CMD_REFUND_CHECK_RESULT = 0xfcaa //校验退款结果
+	};
+
+	//下单流程返回码（包括结算和下单）
+	enum emPlaceOrderRetCode
+	{
+		EM_PLACE_ORDER_QUANTIGY_NOT_ENOUGH = 2004, //商品库存不足
+		EM_PLACE_ORDER_BUY_NUM_LIMIT = 2019, //购买数量限制
+		EM_PLACE_ORDER_VCOIN_NOT_ENOUGH = 2020, //V币余额不足
+		EM_PLACE_ORDER_VCOIN_LOCK_NOT_NOT_ENOUGH = 2021, //由于V币冻结导致余额不足
+		EM_PLACE_ORDER_ERRCODE_QUANTIGY_NOT_ENOUGH = 2003, //库存不足
+		EM_PLACE_ORDER_ERRCODE_NEW_USER_ORDER_LIMIT = 2028, //新人下单限制
+		EM_PLACE_ORDER_ERRCODE_CHECK_PERFER_FAIL = 2026, //购买的商品无法使用优惠
+	};
+
+	//支付错误码
+	enum emPayRetCode
+	{
+		EM_PAY_ACROSS_PLATFORM = 2024, //跨平台支付
+	};
+
+	//支付页面返回的支付结果状态
+	enum emPayNotifyState
+	{
+		EM_PAY_CENTER_NOTIFY_STATE_SUCCESS = 1, //支付成功
+		EM_PAY_CENTER_NOTIFY_STATE_FAIL = 2, //支付失败
+		EM_PAY_CENTER_NOTIFY_STATE_UNKNOW = 3, //支付结果未知
+	};
+
+
+
+	//取消待支付订单的场景
+	enum emCancleOrderScene
+	{
+		EM_PAY_CENTER_CANCLE_ORDER_USER = 1 , //用户主动取消
+		EM_PAY_CENTER_CANCLE_ORDER_TIMEOUT = 2, //订单超时取消
+	};
+
+	//退款操作类型
+	enum emRefundOper
+	{
+		EM_PAY_CENTER_REFUND_OPER_ARBITRATE = 1,		//仲裁结果
+		EM_PAY_CENTER_REFUND_OPER_SELLER_CONFIRM = 2, 	//商家确认
+		EM_PAY_CENTER_REFUND_OPER_EXAMINE_TIMEOUT = 3, 		//退款单审批超时
+	};
+
+	//支付通知回调操作类型
+	enum emPayNotifyOper
+	{
+		EM_PAY_CENTER_PAYNOTIFY_OPER_QUERY = 1, //查询支付结果
+	};
+	//平台id
+	enum emPlatformID
+	{
+		EM_PLATFORM_NONE = 0,
+		EM_PLATFORM_VIDEO_APP = 1,  //视频APP
+		EM_PLATFORM_WEIXIN_APP =2,  //微信APP
+		EM_PLATFORM_QQ_APP = 3,  	//手Q APP
+		EM_PLATFORM_MINI_PROGRAM = 4,  	//微信小程序
+	}; 
+	
+	//结算操作类型
+	enum emBlanceOperation
+	{
+		EM_BLANCE_OPER_TYPE_RECOMMEND = 100,	//系统默认推荐结算
+		EM_BLANCE_OPER_TYPE_USER_CHOOSE = 101,  //用户选择价格结算
+	};
+
+	//退款校验操作
+	enum emRefundCheckOper
+	{
+		EM_REFUND_CHECK_OPER_REFUND_ORDER = 1, //订单退款检验
+		EM_REFUND_CHECK_OPER_PAY_CANCEL_ORDER = 2, //支付取消的订单自动退款校验
+		EM_REFUND_CHECK_OPER_REPAY_ORDER = 3, //订单重复支付退款
+	};
+
+	//转账状态
+	enum emTranscationStatus
+	{
+		EM_TRANS_STATUS_SUCC = 1, //转账成功
+		EM_TRANS_STATUS_FAIL = 2, //转账失败
+		EM_TRANS_STATUS_PROCESSING = 3, //转账处理中
+	};
+   
+   	enum emQueueUpStatus                                  //排队状态
+    {
+        QUEUEUP_STATUS_INIT = 0,      //没有排队
+        QUEUEUP_STATUS_FINISH = 1,    //已经排队完成并下单
+        QUEUEUP_STATUS_QUEUING = 2,   //排队中
+        //QUEUEUP_STATUS_FULL = 3,      //队列已满
+        //QUEUEUP_STATUS_DESERT = 4,    //节点已被淘汰
+		//QUEUEUP_STATUS_SRC_LACK = 5,  //资源不足
+    };
+
+	//限购类型
+	enum emBuyLimitType
+	{
+		EM_BUY_LIMIT_TYPE_NONE = 0, 
+		EM_BUY_LIMIT_TYPE_ACT = 1, //活动限购
+		EM_BUY_LIMIT_TYPE_ACT_SKU = 2, //活动商品限购
+		EM_BUY_LIMIT_TYPE_SKU = 3, //商品基本限购
+	};
+    //支付订单
+	struct STPayDivisionOrderInfo
+	{
+		1 require string strNote;            //留言信息
+	};
+
+	//排队信息
+	struct STQueueUpInfo
+	{
+		1 require int iStatus; 					//排队状态，参考emQueueUpStatus
+		2 require long ddwSeqNum;           	//排第几
+		3 require string strQueueSession;       //排队会话信息，同一个会话业务需要回带
+	};
+
+	//登录态信息
+	struct STVmallLoginInfo
+	{
+		1 require  long TokenUin;
+		2 require string TokenValue;
+		3 require string TokenAppID;
+		4 require byte TokenKeyType;
+		5 require bool bMainLogin;
+	};
+
+	//下单请求
+	struct STPlaceOrderReq
+	{
+		1 require vector<STGoodsInfo> vecGoodsInfo;		//购买的商品信息
+		2 require STPostInfo stPostInfo; 				//邮寄地址信息
+		3 optional string strNote;						//买家留言
+		4 optional unsigned int uiPayVCoin;				//支付的V币
+		5 optional STPerferential stPerfInfo;			//用户选择的优惠方式
+		6 optional string strPayTag;					//下单渠道信息
+		7 optional long ulDeliAddrId;					//用户地址ID
+		8 optional vector<STPayDivisionOrderInfo> vecPayDivisionOrderInfo;
+		9 optional string strOmgId;
+		10 optional string strChannelId; 				//渠道ID
+	};
+
+	struct STSkuErrInfo
+	{
+		1 require int iErrCode;
+		2 require string strErrMsg;
+	};
+	struct STBuyLimitErrInfo
+	{
+		1 optional string strSkuId;
+		2 optional string strActId;
+		3 optional int iLimitNum;	//限购数量
+		4 optional int iBuyLimitType;		//限购类型,参考emBuyLimitType
+	};
+	
+	//下单响应
+	struct STPlaceOrderRsp
+	{
+		1 require int iRetCode; //返回码, 参考枚举值
+		2 require string strErrMsg; //错误信息
+		3 require string strPayOrderId; 		//支付订单id
+		4 optional map<string, STSkuErrInfo> mapSKUId2ErrInfo;	//信息的sku错误信息（废弃）
+		5 optional STQueueUpInfo stQueueInfo;		//排队信息
+		6 optional STBuyLimitErrInfo stBuyLimitErrInfo; //限购错误信息
+	};
+
+	//下单异常请求消息
+	struct STPlaceOrderAbnormalReq
+	{
+		1 require string strPayOrderId; 		//支付订单id
+		2 require string strUserId;				//用户id
+		3 optional int iTime;					//下单时间
+	};
+
+	//支付请求
+	struct STPayReq
+	{
+		1 require string strPayOrderId; 		//支付订单id
+		2 optional emPlatformID emPayPlatform;	//支付的平台，参考emPlatformID
+		3 optional string strPayOpenId;			//支付的用户ID，微信openid
+	};
+
+	//支付响应
+	struct STPayRsp
+	{
+		1 require int iRetCode; 				//返回码, 参考枚举值
+		2 require string strErrMsg; 			//错误信息
+		3 optional string strGoodsTokenUrl;		//调用米大师页面时需要的参数
+		4 optional string strTokenId;			//调用米大师页面是的token参数
+		5 optional int iAppId;					//调用米大师页面的appid
+		6 optional string strFPayOpenId;		//米大师支付下单时的openid
+	};
+	
+	//支付异常请求消息
+	struct STPayAbnormalReq
+	{
+		1 require string strPayOrderId; 		//支付订单id
+		2 require string strUserId;				//用户id
+	};
+
+	//支付通知请求(H5调用)
+   	struct STPayNotifyReq
+   	{
+   		1 require string strPayOrderId; 		//支付订单id
+   		2 require int iPayState;				//支付状态，参考emPayNotifyState
+   		3 optional unsigned int uiOperation;	//操作类型，参考emPayNotifyOper
+   	};
+
+   	//支付通知响应(H5调用)
+   	struct STPayNotifyRsp
+   	{
+   		1 require int iRetCode; 		//返回码, 参考枚举值
+		2 require string strErrMsg; 	//错误信息
+		3 optional int iResultState;		//支付状态，参考emPayNotifyState
+   	};
+
+   	//发货通知请求
+   	struct STDeliveryNotifyReq
+   	{
+   		1 require int iAppId;
+   		2 require string strProductId;
+   		3 require int iProductNum;
+   		4 require int iAmt; 			//用户实际支付金额，单位：分（人民币）
+   		5 require string strPayOrderId;
+   		6 require string strMidasOrderId;
+   		7 require string strVersion;
+   		8 require string strProvideType;
+   		9 require string strMetaData;
+   		10 require string strChannel;
+   		11 require string strChannelOrderId;
+   		12 optional string strOpenId;
+   		13 optional vector<STVmallLoginInfo> vecLoginInfo; 
+   		14 optional string strOutTradeNo;
+		15 optional emPlatformID emPayPlatform;  //支付的平台，参考emPlatformID
+	};
+
+   	//发货通知响应
+   	struct STDeliveryNotifyRsp
+   	{
+		1 require int iRetCode; //返回码, 参考枚举值
+		2 require string strErrMsg; //错误信息
+   	};
+
+   	//退款请求
+   	struct STRefundReq
+   	{
+	   	1 require string strRefundOrderId;				//支付单
+	    2 require unsigned int uiOperation;		//退款操作，参考订单系统的退款操作码STATUS_REFUND_ORDER
+	    3 optional unsigned int uiArbitCashPrice;		//仲裁退款现金金额
+	    4 optional string strArbitResult;               //仲裁描述
+   	};
+
+
+   	//退款响应
+   	struct STRefundRsp
+   	{
+   		1 require int iRetCode; 			//返回码, 参考枚举值
+		2 require string strErrMsg; 		//错误信息
+		3 optional unsigned int uiRefundStatus; //退款单状态
+   	};
+
+   	//退款异常请求消息
+	struct STRefundAbnormalReq
+	{
+		1 require string strPayOrderId;
+		2 require string strRefundOrderId;
+		3 require unsigned int uiOperation;				//退款操作，参考emRefundOper
+	};
+
+	//取消待支付订单
+	struct STCancelPayOrderReq
+	{
+		1 require string strPayOrderId;		//支付订单号
+		2 require unsigned int uiScene; 	//场景，参考emCancleOrderScene
+		3 optional string strReason;		//取消原因
+	};
+
+	struct STCancelPayOrderRsp
+	{
+   		1 require int iRetCode; 			//返回码, 参考枚举值
+		2 require string strErrMsg; 		//错误信息
+	};
+
+	//结算请求
+	struct STBalanceReq
+	{
+		1 require int iOperationId; 					 //操作id,参考emBlanceOperation
+		2 require vector<STGoodsInfo> vecGoodsInfo;		//购买的商品信息
+		3 optional STPerferential stPerfInfo;			//用户选择的优惠方式
+		4 optional long ulDeliAddrId;					//用户地址ID
+		5 optional STPostInfo stPostInfo; 				//邮寄地址信息
+		6 optional unsigned int uiPayVCoin;				//支付的V币
+		7 optional string strChannelId; 				//渠道ID
+	};
+
+	struct STPaySkuInfo
+	{
+		1 require STProductSkuInfo stProductSkuInfo;
+		2 require STPriceInfo 	stPriceInfo;
+	};
+
+	struct STExressOrderProductInfo
+	{
+		1 require string strSellerId;							//商家id
+		2 require string strSeller;								//商家名称			
+		3 require STPayPriceInfo stSumPriceInfo;				//物流单总价信息  
+		4 require map<string, STPaySkuInfo>	map2PaySkuInfo;
+	};
+
+	//结算响应
+	struct STBalanceRsp
+	{
+		1 require int iErrCode;
+		2 require string strErrMsg;
+		3 require map<string, STSkuErrInfo> mapSKUId2ErrInfo;	//sku错误信息（废弃）
+		4 require STPayPriceInfo stPayPriceInfo;
+		5 require vector<STExressOrderProductInfo>	vecExpressOrderProductInfo;
+		6 optional STUserPayProp stUserPayProp;		//用户具有的支付属性，比如V币等
+		7 optional vector<STPerferential> vecAllPreferentail;	//支持的所有优惠方式
+		8 optional  vector<STPerferential> vecResultPreferentail;	//计价使用的优惠方式
+		9 optional  vector<STPerferential> vecUnableUsePreferentail; //不能使用的优惠方式
+		10 optional STBuyLimitErrInfo stBuyLimitErrInfo; //限购错误信息
+		11 optional UserPddGlodsProp stUserPddGlodsProp;		//用户具有的支付属性，比如金币等
+	};
+	struct STVMallTranscationIdInfo
+	{
+		1 require short wIdType;	//订单类型，参考EM_TRANS_ID_TYPE_WX
+		2 require string strTranscationId; //订单id
+	};
+
+	struct STVMallTransferReq
+	{
+		1 require STPayUserInfo stUserInfo;		//转账用户账号信息
+		2 require unsigned int uiCash;			//转账金额，单位：分
+		3 optional string strRefundOrder;		//额外退款订单号
+		4 optional long lVUid;					//转账用户vuid
+	};
+
+	struct STVMallTransferRsp
+	{
+	   	1 require int iErrCode;
+   		2 require string strErrMsg;
+   		3 require int iStatus;		//转账状态，参考emTranscationStatus
+   	};
+
+	//====后台发起的请求=========
+   	//退款订单超时请求
+   	struct STRefuncOrderTimeOutReq
+   	{
+   		1 require string strRefundOrderId;				//退款单id
+   		2 require string strUserId;						//用户id
+   		3 require string strPayOrderId;					//对应支付订单id
+   		4 require unsigned int uiRefundCashPrice;      	//退货现金金额
+		5 require unsigned int uiRefundVCoin;           //退货V币数
+		6 require unsigned int iRefundReasonType;       //退款理由类型
+		7 optional string strPayUserId; 				//支付用户ID
+		8 optional unsigned int uiTransPrice; 			//需要退的运费
+		9 optional unsigned int uiArbitCashPrice;		//仲裁退款现金金额
+		10 optional int iOperation;						//操作id，参考emRefundCheckOper
+   		11 optional string strPhone;					//用户联系电话
+   		12 optional string strSkuId;					//申请退款的sku
+   	   	13 optional unsigned int uiRefundType;				//退款类型，参考emRefundType
+   		14 optional string strChannelId; 				//渠道ID
+   		15 optional unsigned short usPayCreditsType;	//积分类型，参考emPayCreditsType
+   		16 optional unsigned int uiGoodsNum; 				//退货数量
+   		17 optional string strBatchId;					//商品批次ID
+   		18 optional vector<STPriceTag> vecRealPriceTag;	//标签
+   		19 optional unsigned int uiRefundMethod;             //退款方式对应E_REFUND_METHOD
+   		20 optional STPayUserInfo stUserInfo;		//转账用户账号信息
+   	};
+
+   	struct STRefuncOrderTimeOutRsp
+   	{
+   		1 require int iErrCode;
+   		2 require string strErrMsg;
+   	};
+
+   	//支付单超时请求
+   	struct STPayOrderTimeOutReq
+   	{
+   		1 require string strPayOrderId;		//支付订单id
+   		2 require string strUserId; 		//用户VUID
+   		3 require unsigned int uiStatus;	//当前订单状态
+   		4 optional string strPayUserId; 	//支付用户ID
+   		5 optional emPlatformID emPayPlatform;	//支付的平台，参考emPlatformID
+   	};
+
+   	struct STPayOrderTimeOutRsp
+   	{
+   		1 require int iErrCode;
+   		2 require string strErrMsg;
+   	}; 
+
+   	//额外退款结果校验请求
+   	struct STTransferCheckResultReq
+   	{
+   		1 require string strRefundOrder;			//额外退款单id
+   		2 require STPayUserInfo stUserInfo;		//转账用户账号信息
+   		3 optional long lVUid;					//转账用户vuid
+   	};
+
+   	//转账结果校验请求
+   	struct STTransferCheckResultRsp
+   	{
+   		1 require int iErrCode;
+   		2 require string strErrMsg;
+   	};
+
+   	//发货信息转发
+   	struct STDeliveryTransferReq
+   	{
+   		1 require string strPayOrderId; 			//支付订单
+   		2 require long lVUid;					//用户vuid
+   		3 require string strOpenId;				//midas下单时的openid	
+   		4 require string strChannelOrderId;		//通道订单号，比如微信订单号
+   		5 require unsigned int uiPayCash;		//支付金额（单位：分）
+		6 optional string strMidasOutTradeNo;	//米大师订单号
+		7 optional emPlatformID emPayPlatform;	//支付的平台，参考emPlatformID
+	};
+
+   	struct STDeliveryTransferRsp
+   	{
+    	1 require int iErrCode;
+   		2 require string strErrMsg;  		
+   	};
+
+};

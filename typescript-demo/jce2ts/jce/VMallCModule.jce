@@ -1,0 +1,374 @@
+#include "VideoMallComm.jce"
+
+module VmallPage {
+	
+	//首页、IP聚合页、活动页的数据
+	//层级为： 页面--（包含多个）模块 -- （包含）样式和商品/IP数据
+	
+    enum CMD
+    {
+        PAGE_DATA_REQ = 0xf36d,         //页面请求
+        MOD_DATA_REQ = 	0xf36e,         //模块请求
+		PAGE_DATA_NO_CACHE_REQ = 0xf62b, //页面请求（B端）
+		MOD_DATA_NO_CACHE_REQ = 0xf62c,  //模块请求（B端）
+		APP_POSTER_DATA_REQ = 0xf6e0,	//APP精选数据接口，协议使用APP的协议
+    };
+	
+    enum EM_MOD_TYPE                    //UI样式类型
+    {
+        EM_MOD_IMG_BANNER = 1,                       //大图横幅             对应结构：STImgBanner
+        EM_MOD_IMG_NAV = 2,                             //小图导航             对应结构：STImgBanner
+        EM_MOD_PROD_BANNER = 3,                    //带背景商品横幅    对应结构：STProductBanner
+        EM_MOD_IP_BANNER = 4,                          //带背景IP横幅       对应结构：STIPBanner
+        EM_MOD_IP_IMG = 5,                                 //IP单图                对应结构：STImgBanner
+        EM_MOD_THREE_PROD = 6,                       //热销三商品          对应结构：STProductBanner
+        EM_MOD_PROD_LIST = 7,                          //商品列表             对应结构：STProductBanner
+		EM_MOD_IP_LIST = 8, 		                          //IP列表 				  对应结构：STIPBanner
+		EM_MOD_TITLE = 9,                                   //模块标题             对应结构：STTitleInfo
+		EM_MOD_THREE_PROD_BANNER = 10,      //带背景三商品       对应结构：STProductBanner
+        EM_MOD_THREE_ACTIVE = 11,                    //活动三商品         对应结构：STProductBanner
+        EM_MOD_THREE_IP = 12,                     //热销三IP             对应结构：STIPBanner
+        EM_MOD_ONE_PROD  = 13,                       //推荐单商品          对应结构：STProductBanner
+        EM_MOD_VCOIN  = 14,                               //三图V币展示       对应结构：STImgBanner
+		EM_MOD_IPINFO = 15, 							  //单个IP信息 		  对应结构：STProductBanner
+		EM_MOD_FOUR_ACTIVE = 16,						//活动四商品 对应结构：STProductBanner
+		EM_MOD_SIX_ACTIVE = 17,							//活动六商品 对应结构：STProductBanner
+		EM_MOD_FIVE_ICON = 18,							//分类横划ICON   对应结构STImgBanner
+		EM_MOD_FOUR_PROD = 19,							//1+3商品，可配置一级类目ID、IPID、活动ID ，按最高销量拉取，对应结构STProductBanner
+		EM_MOD_TOPIC_THREE_PROD = 20,					//主题三商品，可配置类目ID、IPID、活动ID，按最高销量拉取，商品有背景色，对应结构STProductBanner
+		EM_MOD_CONF_PROD = 21,							//全配置商品，用于心悦页面的数据展示，对应结构STProductBanner
+		EM_MOD_ONE_BANNER = 22,							//单banner结构，对应STImgBanner
+		EM_MOD_RECOM = 23,								//每日推荐模块，对应STProductBanner
+		EM_MOD_MULTI_IP = 24,							//IP 横划模块，对应结构STMultiIpBanner
+		EM_MOD_IP_MULTI_IMG = 25,						//多IP小图横划，对应STIPBanner
+		EM_MOD_ONE_SUB_IP = 26,							//前端不使用，这个模块对应的是多IP横划的子模块类型
+		EM_MOD_VIDEO_TWO_IMG = 27,						//视频双背景图模块，对应STVideoBanner
+		EM_MOD_TAIL_TEXT = 28,							//尾部文字模块，对应STTitleInfo
+		EM_MOD_MULT_COUPON = 29,						//多优惠券模块，对应STCouponBanner
+		EM_MOD_ONE_PRODUCT_AD = 30,						//单商品广告模块，对应STProductBanner
+		EM_MOD_CHANNEL_HEAD = 31,						//频道页卡头部模块，对应STMultiIpBanner
+		EM_MOD_MULTI_SECKILL = 32,						//秒杀活动模块，对应STMultiIpBanner
+		EM_MOD_VIP_COUNPON = 33,						//VIP 优惠券模块，对应STMultiCounpon
+		EM_MOD_CONTENT_BANNER = 34,						//内容banner, STContentBanner
+    };
+    
+    enum EM_REQ_TYPE
+    {
+        EM_REQ_NONE = 1,                //直接渲染
+        EM_REQ_MOD = 2,                 //二次请求
+        
+    };
+    
+	enum EM_PROD_PRICE_TYPE
+	{
+		EM_PROD_PRICE_TYPE_VIP = 1, //VIP
+		EM_PROD_PRICE_TYPE_NEW_USER = 2, //新用户
+		EM_PROD_PRICE_TYPE_ACT = 3, //活动
+	};
+
+    enum EM_PRICE_PRIVIL
+	{
+		EM_PRIVILEGE_VIP = 1, //视频会员
+	};
+    
+    enum EM_PAGE_TYPE
+    {
+        EM_PAGE_LIST = 1,                 //列表页（废弃
+        EM_PAGE_SUBJECT = 2,           //IP专题页（废弃
+		EM_PAGE_ACT_TOPIC = 100,		//活动主题货架
+		EM_PAGE_HOME = 0,				//首页货架
+		EM_PAGE_NORMAL = 101,			//普通货架
+    };
+
+	//文本结构
+    struct STTitleInfo
+    {
+        0 optional string strTitle;
+        1 optional string strTitleUrl;
+    };
+    
+    //视频结构
+	struct STVideoInfo
+	{
+		1 optional string strVid;
+		2 optional string strCoverUrl;
+	};
+	
+    //图片结构
+    struct STImgInfo
+    {
+        0 optional string strImgUrl;
+        1 optional string strLinkUrl;
+		2 optional string strImgTitle;
+    };
+    
+	//视频及多图结构
+	struct STVideoBanner
+	{
+		1 optional STVideoInfo stVideo;					//视频信息
+		2 optional STImgInfo stBackGroundHead;			//头部背景
+		3 optional STImgInfo stBackGroundTail;			//尾部背景
+	};
+	
+	//推荐人信息
+	struct STRecomManInfo
+	{	
+		1 optional string strId;		//ID
+		2 optional string strName;		//名字
+		3 optional string strPic;		//头像
+	};
+	
+	//推荐信息
+	struct STRecomInfo
+	{
+		1 optional bool bHasRecomMan = false;
+		2 optional STRecomManInfo stMan;			//推荐人
+		3 optional string strRecomText;				//推荐语
+		4 optional STImgInfo stMainImg;				//主图
+	};
+	
+	//内容banner结构
+	struct STContentBanner
+	{
+		1 optional STTitleInfo stTitleInfo;			//标题和跳转链接
+		2 optional STRecomInfo stRecomInfo;			//推荐信息
+	};
+	
+    //背景及多图结构
+	struct STImgBanner
+	{
+       0 optional STImgInfo stBackGround;                 //背景图
+	   1 optional vector<STImgInfo> vecImgInfo;           //图片列表地址
+	   2 optional STTitleInfo stTitleInfo;                //标题
+	};
+    
+    //特权信息
+	struct STPriviInfo
+	{
+		1 require int 	iPrivilegeId;		                  //特权id，参考emPricePrivilege
+		2 optional unsigned int uiDiscount;         //特权抵扣的金额
+        3 optional bool bIsMatch;
+	};
+
+//	struct STPriceTag
+//	{
+//		1 require int iPriceType;	//参考EM_PROD_PRICE_TYPE
+//		2 optional string strTagName; 	//价格标签名
+//	};
+
+	//单一IP结构
+    struct STIPInfo
+    {
+        1 require string strIPId;						        //IP_ID
+        2 require string strTitle;							    //IP_名称
+        3 optional string strImgDesc;                           //IP详情图片
+        4 optional int iProdNum;                                //IP下商品数
+        5 optional vector<string> vecProdImg;             		//IP下商品抠图
+		6 optional string strMattingPic;                        //抠图
+        7 optional unsigned int uiColor;                        //底色
+		8 optional vector<unsigned int> vecColor;				//颜色组颜色
+		9 optional string strUrl;								//聚合页链接
+    };
+	
+	//单一活动结构
+	struct STActInfo
+	{
+		1 optional string strActId;			//活动ID
+		2 optional string strMattingPic;		//活动图片
+		3 optional unsigned int uiColor;		//活动主题色组
+		4 optional vector<unsigned int> vecColor;	//活动颜色
+		5 optional int iStartTime;					//秒杀开始时间
+		6 optional int iEndTime;					//秒杀结束时间
+		7 optional int iActType;					//活动类型			1 -- 系统，2--运营 3秒杀 4 线下
+	};
+	
+	//单一类目结构
+	struct STCatInfo
+	{
+		1 optional string strCatId;
+		2 optional string strMattingPic;		//抠图
+		3 optional string strTitle;				//名字
+	};
+    
+	//单一优惠券结构
+    struct STCouponInfo
+	{	
+		1 optional string strId;								//批次Id
+		2 optional unsigned int uiThreshold;					//门槛
+		3 optional unsigned int uiDiscount;						//抵扣金额
+		4 optional int iCouponType;								//券类型
+		5 optional string strShortTitle;						//简称
+		6 optional string strKey;								//优惠券秘钥
+		7 optional bool bHasIdentityLimit;						//是否有身份限制
+		8 optional vector<unsigned int> vecIdentityLimit;		//身份规则
+		9 optional unsigned int uiUseType;						//适用范围，透传优惠券的字段
+		10 optional int iPercent;                   			//折扣券折扣百分比，比如10%折扣填10
+		11 optional string strCouponContent;					//优惠券说明
+		12 optional unsigned int uiCouponNum;					//总数
+		13 optional unsigned int uiReceivedNum;					//已领取数量
+	};
+	
+    //商品结构
+    struct STProductInfo
+    {
+        1 require string strProductId;						    //商品ID
+		2 require string strTitle;							        //商品名
+        3 optional string strImgDesc;                            //商品详情图片
+        4 optional unsigned int uiVCoinPrice;				//组合价中的V币价格
+		5 optional unsigned int uiCashPrice;				    //组合价中的现金价格
+		6 optional unsigned int uiOriPrice;				        //原价
+		7 optional unsigned int uiPureVCoinPrice;			//纯V价格，单位：分
+		8 optional unsigned int uiPureCashPrice;			//纯现金价格，单位：分
+		9 optional unsigned int uiSale;					        //销量
+		10 optional string strMattingImg; 						//商品抠图
+		11 optional string strIpId; 							//商品IPId
+		12 optional string strIpName; 							//商品ID名称
+		13 optional vector<STIPInfo> vecIp;						//商品所属IP列表，不包含图片
+		15 optional unsigned int uiRealPrice;					//实际显示价格，可能是特权价格
+		17 optional unsigned int uiExpectPrice;					//期望价格
+		18 optional vector<VideoMall::STPriceTag> vecRealPriceTag;			//最终价格标签
+		19 optional vector<VideoMall::STPriceTag> vecExpectPriceTag;		//期望价格标签
+		
+		20 optional unsigned int uiSpreadPrice;				//推广价格
+		21 optional vector<VideoMall::STPriceTag> vecSpreadPriceTag;	//推广价格标签
+		
+		22 optional unsigned int uiColor;					//底色
+		23 optional vector<string> vecSearchWord;			//商品关键词
+		24 optional int iQuantity;							//商品库存
+		
+		25 optional string strConfText;						//配置文案，用于每日推荐模块
+		26 optional vector<unsigned int> vecColor;			//颜色组颜色，用于每日推荐模块
+		
+		27 optional string strSecCatId;						//二级类目ID
+		28 optional string strScript;						//商品角标
+		
+		29 optional vector<VideoMall::STScriptInfo> vecScript;		//商品角标，28 字段废弃
+		30 optional vector<VideoMall::STScriptInfo> vecActScript;	//活动角标
+		
+		31 optional VideoMall::STCredictInfo stCredict;				//积分配置
+		
+    };
+    
+    //背景及多商品结构
+    struct STProductBanner
+	{
+    	0 optional STImgInfo stBackGround;                                 //背景图
+		1 optional vector<STProductInfo> vecProductInfo;           		   //商品列表
+		2 optional STTitleInfo stTitleInfo;   							   //标题
+		3 optional STIPInfo stIPInfo;                                      //IP信息
+		4 optional unsigned int uiProdRow;								   //商品行数
+		5 optional unsigned int uiProdCol;								   //商品列数
+		6 optional STActInfo stActInfo;										//活动信息
+		7 optional int iInfoType = 2;										//模块配置的ID类型，1--一级类目ID，2--IP ID 3--活动ID
+	};
+	
+	//多IP横划结构
+	struct STMultiIpBanner
+	{
+		0 optional STTitleInfo stTitleInfo;									//标题
+		1 optional vector<STProductBanner> vecInfo;							//IP对应信息
+    };
+	
+    //多优惠券结构
+	struct STCouponBanner
+	{
+		0 optional STTitleInfo stTitleInfo;
+		1 optional vector<STCouponInfo> vecCouponInfo;
+	};
+	
+	
+    //背景及多IP结构
+    struct STIPBanner
+	{
+       0 optional STImgInfo stBackGround;               //背景图
+	   1 optional vector<STIPInfo> vecIPInfo;           //IP列表
+	   2 optional STTitleInfo stTitleInfo;              //标题
+	   3 optional STTitleInfo stSubTitle;				//横划标题
+	   4 optional vector<STCatInfo> vecCatInfo;			//一级类目信息
+	   5 optional int iInfoType = 2;					//1 -- 一级类目，2 --二级IP 3-- 活动
+	   6 optional bool bNoColor = false;				//不使用颜色组配置
+	};
+    
+    struct STModuleData
+    {
+        0 require int emModType;                //模块类型（对应EM_MOD_TYPE）
+        1 require int emReqType;                //请求类型（对应EM_REQ_TYPE）
+        2 optional string strDataKey;           //请求模块子服务所需的DataKey
+        3 optional string strJsData;            //模块对应的Json结构
+        4 optional string strPageContext; 	    //下一页的翻页上下文
+        5 optional string strModName;          	//模块名称
+		6 optional int iModGap;					//模块间隔
+		7 optional bool bShowName;				//是否显示名字
+		8 optional string strModId;				//模块ID
+    };
+    
+	enum E_PARAM_TYPE
+	{
+		E_TYPE_PRI_CAT = 1,
+		E_TYPE_SEC_IP = 2,
+		E_TYPE_ACT = 3,
+		E_TYPE_SECKILL_ACT = 4,
+		E_TYPE_PROD_POOL = 5,
+	};
+	
+	//页面分享设置
+	struct STPageShareInfo
+	{
+		1 optional string strTitle;		
+		2 optional string strSubTitle;
+		3 optional string strImg;
+	};
+	
+	struct STPageConfData
+	{
+		1 optional int iType = 0;			//货架类型，对应EM_PAGE_TYPE
+		2 optional string strName;		//货架名称
+		3 optional int iParamType;		//ID类型
+		4 optional string strId;		//ID 
+		5 optional string strIdExt;		//ID 附带的额外信息，二级IP的一级IP
+		6 optional bool bHasFeed = true;		//是否有Feed流
+		7 optional unsigned int uiColorGroup;		//主题色组
+		8 optional vector<unsigned int> vecColor;	//主题色
+		9 optional string strPageId;				//货架Id
+		10 optional STPageShareInfo stShareInfo;		//分享设置
+	};
+	
+    //专题页请求
+	struct STPageDataReq
+	{
+		0 optional int iPageId;				//请求的页面ID
+        1 optional int iPageSize;           //一页多少项（不超过5）
+		2 optional string strPageContext; 	//翻页上下文
+        3 optional string strDataKey;        //固定页面需要提供Datakey（iPageType=1&&strIPId=1）
+	};
+    
+    struct STPageDataRsp
+	{
+		0 require int iErrCode;				        //错误码
+        1 optional string strErrMsg;				//错误码
+		2 optional vector<STModuleData>  vecModData;     //UI显示Json，每一行是一个显示元素
+		3 optional string strPageContext; 	//翻页上下文
+        4 optional bool bHasNext;            //是否还有下一页
+		5 optional int ddwCacheTime;         //后台用的缓存时间戳（前端不关心）
+		6 optional string strPageConf;		//页面配置信息（Json格式）
+	};
+    
+    //模块子请求
+	struct STModuleDataReq
+	{
+		0 optional string strDataKey;             //请求strDataKey
+		1 optional string strPageContext; 	//翻页上下文
+	};
+    
+	struct STModuleDataRsp
+	{
+		0 optional int iErrCode;
+		1 optional string strErrMsg;
+		2 optional STModuleData stModuleData;		//控件数据
+		3 optional string strPageContext; 	//翻页上下文
+        4 optional bool bHasNext;            //是否还有下一页
+		5 optional int ddwCacheTime;         //后台用的缓存时间戳（前端不关心）
+	};
+	
+};
+	

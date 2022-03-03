@@ -1,0 +1,198 @@
+#include "VideoMallComm.jce"
+
+module VMallCredits
+{
+    /*
+		模调信息:	
+	
+		正式环境L5: 
+			
+		测试环境L5: 599873:5832704
+	*/
+	
+	//命令字
+    enum VMALL_CREDITS_CMD
+    {
+        CMD_LOCK_CREDITS				            = 0xfc84,      //预扣积分
+		CMD_UNLOCK_CREDITS				        = 0xfc85,     //取消预扣积分
+		CMD_ACK_PAY_CREDITS				    = 0xfc86,     //确认支付积分
+		CMD_QUERY_LOCK_STATUS			    = 0xfc87,      //查询支付状态
+        CMD_READ_USER_CREDITS 			    = 0xfc88,      //获取用户剩余积分
+		CMD_GIVE_PAY_CREDITS 			        = 0xfc89, 	     //获取购买赠送的积分
+        CMD_REFUND_PAY_CREDITS			    = 0xfc8a,      //退款退还用户积分
+		CND_DEDUCT_PRESENT_CREDITS		= 0xfc8b,      //退款扣除赠送积分
+        CMD_READ_CREDIT_PAY_INFO          = 0xfcc3,      //读取积分订单信息
+        CMD_GET_GIVE_CREDIT_REQ            = 0xfcc4,      //查询可赠送积分
+    };
+    
+    enum emLOCK_STATUS
+	{
+		LOCK					= 1, //预扣
+		UN_LOCK					= 2, //取消预扣
+		ACK_LOCK				= 3, //确认支付
+	};
+    
+    enum emRET
+    {   
+        OK = 0,
+        INPUT_INVALID     = 3001,           //输入参数错误（ID为空等）
+        NEED_LOGIN         = 3002,           //未携带登录包头
+        DEPEND_TIMEOUT = 3003,           //底层超时
+        REQ_NO_DATA      = 3004,           //底层未返回数据
+    };
+    
+    struct STCreditsInfo
+    {
+        0 require string strChannelId;              //对应emCreditsType
+        1 require int uiCreditSum;              //积分数
+        2 optional int iLockStatus;              //参见枚举 emLOCK_STATUS
+    };                      
+    
+    
+    
+    
+    //预扣积分
+	struct STLockCreditReq
+	{
+		0 require string strPayId;                          //支付单号
+		1 require STCreditsInfo stCreditInfo;          //预扣积分
+	};
+	
+	struct STLockCreditRsp
+	{
+		0 require int iErrCode;
+		1 require string strErrMsg;
+	};
+    
+    //取消预扣积分
+	struct STUnlockCreditReq
+	{
+		0 require string strPayId;                          //支付单号
+        1 require string strChannelId;                          //取消预扣的类型
+	};
+	
+	struct STUnlockCreditRsp
+	{
+		0 require int iErrCode;
+		1 require string strErrMsg;
+	};
+    
+    //确认支付积分
+	struct STAckLockCreditReq
+	{
+		0 require string strPayId;                            //支付单号
+        1 require string strChannelId;                          //查询的渠道
+	};
+	
+	struct STAckLockCreditRsp
+	{
+		0 require int iErrCode;
+		1 require string strErrMsg;
+	};
+    
+    
+    //查询冻结状态
+	struct STGetLockStatusReq
+	{
+		0 require string strPayId;                      //支付单号
+        1 require string strChannelId;                    //查询的渠道
+	};
+	
+	struct STGetLockStatusRsp
+	{
+		0 require int iErrCode;
+		1 require string strErrMsg;
+		2 optional STCreditsInfo stCreditsInfo;         //当前积分状态
+	};	
+
+    //读取用户剩余积分
+    struct STReadUserCreditsReq
+    {
+        0 require string strChannelId;                     //查询的渠道ID
+    };
+    
+    struct STReadUserCreditsRsp
+    {
+        0 require int iErrCode;
+		1 require string strErrMsg;
+		3 optional int uiCredits;               //可使用总消费积分
+    };
+    
+    //获取支付赠送的积分
+    struct STGivePayCreditsReq
+    {
+        0 require string strChannelId;                     //查询的渠道ID
+		1 require string strPayId;
+        2 require VideoMall::STPriceInfo stPriceInfo;
+        3 optional vector<VideoMall::STGOrderBase> vecGOrderBase;
+		4 optional string strPayTime;
+    };
+    
+    struct STGivePayCreditsRsp
+    {
+        0 require int iErrCode;
+		1 require string strErrMsg;
+		3 optional int uiGiveCredits;               //赠送的消费积分
+    };
+    
+    //退还支付花费积分
+	struct STRefundPayCreditsReq
+	{
+		0 require string strPayId;                          //支付单号
+		1 require string strRefundOrderId;             //退款订单号
+		2 require STCreditsInfo stCreditsInfo;        //
+	};
+	
+	struct STRefundPayCreditsRsp
+	{
+		0 require int iErrCode;                                       //支付单号
+		1 require string strErrMsg;                                 //退款订单号
+		2 require STCreditsInfo stCreditsInfo;
+	};	
+	
+	//扣支付赠送积分
+	struct STDeductPresentCreditsReq
+	{
+		0 require string strChannelId;                         //查询的渠道ID
+		1 require string strPayId; //支付订单号
+		2 require string strRefundOrderId; //退款订单号,用于退款去重
+		3 optional vector<VideoMall::STGOrderBase> vecRefundProduct;  
+	};
+	
+	struct STDeductPresentCreditsRsp
+	{
+		0 require int iErrCode;
+		1 require string strErrMsg;
+		2 require STCreditsInfo stCreditsInfo;
+	};
+    
+    //读取积分订单信息
+    struct STReadCreditPayInfoReq
+    {
+        0 require string strChannelId;
+        1 require string strPayId;
+    };
+    
+    struct STReadCreditPayInfoRsp
+    {
+        0 require int iErrCode;
+        1 require string strErrMsg;
+        2 optional unsigned int uiGiveCredits;      //订单赠送的积分数
+    };
+    
+    //查询可赠送积分
+    struct STGetGiveCreditReq
+    {
+        0 require string strChannelId;
+        1 require int uiCashSum;                //消费金额
+    };
+    
+    struct STGetGiveCreditRsp
+    {
+        0 require int iErrCode;
+        1 require string strErrMsg;
+        2 optional unsigned int uiGiveCredits;      //赠送积分数
+    };
+ 	
+
+};

@@ -1,0 +1,131 @@
+/*
+ * L5
+ * 测试环境：599873:3014656
+ */
+module VideoMall
+{
+	
+	enum emExpressCmd
+	{
+		EM_EXPRESS_CMD_REG = 0xf402,
+		EM_EXPRESS_CMD_QUERY = 0xf403,
+		EM_EXPRESS_CMD_UPDATE_NOTIFY = 0xf404,
+		EM_EXPRESS_CMD_TRANSFER = 0xf405,
+		EM_EXPRESS_CMD_GET_EXP_COMPANY = 0xf411,
+	};
+
+	enum emQueryOperation
+	{
+		EM_QUERY_OPER_ALL = 1, //查询所有物流节点信息
+		EM_QUERY_OPER_LAST_NEW = 2, //查询最新物流节点信息
+	};
+
+	enum emGetCompanyOperation
+	{
+		EM_GET_ALL_COMPANY = 1, 	//查询所有物流公司信息
+		EM_GET_COMPANY_BYID = 2, 	//根据id查询
+	};
+
+	struct STExpCompanyInfo
+	{
+		1 require int iCompanyId;			//快递公司ID
+		2 require string strCompanyCode;	//快递公司编码
+		3 require string strCompanyName;	//快递公司名称
+	};
+
+	//注册
+	struct STRegisterReq
+	{
+		1 require int iAppid;						//业务id，系统分配
+		2 require string strExpressId;				//快递单号
+		3 require int iCompanyId;					//快递公司ID
+	};
+
+	struct STRegisterRsp
+	{
+		1 require int iErrCode;
+		2 require string strErrMsg;
+	};
+
+	//查询快递物流信息
+	struct STExpressNode
+	{
+		1 require int iState;				//状态
+		2 require string strStateName;		//状态名称
+		3 require string strTime;			//物流更新时间
+		4 require string strContext;		//物流内容
+	};
+
+	struct STQueryExpressInfoReq
+	{
+		1 require int iAppid;				//业务appid，系统分配
+		2 require string strExpressId;		//快递单号
+		3 require int iOperation; 			//查询操作类型，参考emQueryOperation
+	};
+	
+
+	struct STQueryExpressInfoRsp
+	{
+		1 require int iErrCode;
+		2 require string strErrMsg;
+		3 require int iExpState;							//快递单状态
+		4 require STExpCompanyInfo stExpCompany;			//快递公司信息
+		5 require vector<STExpressNode> vecExpressNode;		//各物流节点信息
+	};
+
+	//快递平台回调通知请求
+	struct STExpressResult
+	{
+		1 require string strMessage;		//提示信息
+		2 require int iState;				//快递单状态					
+		3 require string strCondition;		//快递单状态明细
+		4 require bool bIsCheck;			//是否自动校验快递公司编码
+		5 require string strCompanyCode;	//快递公司编码
+		6 require string strExpressId;		//快递单号
+		7 require string strExpressData;	//快递节点信息
+	};
+
+	struct STUpdateNotifyReq
+	{
+		1 require string strStatus;					//响应状态
+		2 require string strMessage;				//响应消息
+		3 require byte ucAutoCheck;					//自动校验
+		4 require string strComOld;					//订阅时的公司编码
+		5 require string strComNew;					//修正后的公司编码
+		6 require STExpressResult stExpressResult;	//快递详细信息
+	};
+
+	struct STUpdateNotifyRsp
+	{
+		1 require int iErrCode;
+		2 require string strErrMsg;
+	};
+
+	//更新通知转发请求
+	struct STUpdateTransfer
+	{
+		1 require string strExpressId;		//快递单号
+		2 require STExpressNode stLastExpressInfo; //快递更新
+	};
+
+	struct STUpdateTransferRsp
+	{
+		1 require int iErrCode;
+		2 require string strErrMsg;
+	};
+
+	//拉取快递公司信息
+	struct STGetExpCompanyReq
+	{
+		1 require int iOperation;					//操作id，参考emGetCompanyOperation
+		2 require vector<string> vecQueryFlag;		//查询标识，比如：公司id，公司名称，由iOperation指定
+	};
+
+	struct STGetExpCompanyRsp
+	{
+		1 require int iErrCode;
+		2 require string strErrMsg;
+		3 require vector<STExpCompanyInfo> vecCompanyInfo;	//快递公司信息
+	};
+
+};

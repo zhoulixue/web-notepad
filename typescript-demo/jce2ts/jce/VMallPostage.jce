@@ -1,0 +1,152 @@
+module VMallPostage
+{
+	/*
+	    测试环境：10.49.107.200:35666
+		正式环境：
+	*/
+	enum emSubCmd
+	{
+		CMD_MGT_READ_POSTAGE_LIST = 0xf643,            // 管理台读列表
+		CMD_MGT_READ_POSTAGE_INFO = 0xf6e8,            // 管理台读详情
+		CMD_MGT_WRITE_POSTAGE = 0xf644,                // 管理台写
+		CMD_USER_READ_POSTAGE = 0xf645,                // 用户读
+	};
+	enum emErrCode
+	{
+		RT_QUERY_READ_ERROR = 2001,
+		RT_QUERY_WRITE_ERROR = 2002,
+		RT_GET_SELLER_NAME_ERROR = 2003,
+		RT_SELLERID_INVALID_ERROR = 2004,
+		RT_RIGHT_NOT_ENOUGH_ERROR = 2005,
+		RT_TYPE_INVALID_ERROR = 2006,
+		RT_GET_USER_INFO_ERROR = 2007,
+		RT_GET_ADDR_INFO_ERROR = 2008,
+	};
+	enum emPostageCalcType
+	{
+		PCT_FIXED = 1,             // 固定运费
+		PCT_BY_WGT = 2,            // 根据重量计费
+		PCT_BY_VOL = 3,            // 根据体积计费
+		PCT_BY_NUM = 4,            // 根据件数计费
+	};
+	enum emAreaId
+	{
+		AI_DEFAULT = 100000,        // 默认地址ID
+	};
+	struct STSellerInfo
+	{
+		1 optional string strSellerId;
+		2 optional string strSellerName;
+	};
+	enum emBaoType
+	{
+		BT_PRICE = 1,                 // 金额(xx元以上)
+		BT_WEIGHT = 2,                // 重量(xx克以下)
+		BT_VOLUME = 3,                // 体积(xx立方厘米以下)
+		BT_NUM = 4,                   // 件数(xx件以上)
+		BT_PRICE_AND_WEIGHT = 5,      // 金额+重量
+		BT_PRICE_AND_VOLUME = 6,      // 金额+体积
+		BT_PRICE_AND_NUM = 7,         // 金额+件数
+	};
+	struct STBaoPostageConf
+	{
+		1 optional vector<unsigned int> vecAreaId;           // 包邮覆盖区域
+		2 require int iType;                                 // 包邮类型，取自emBaoType
+		3 require unsigned int dwParam1;                     // 参数1，必填
+		4 optional unsigned int dwParam2;                    // 参数2，选填
+	};
+	struct STPostage
+	{
+		1 require unsigned int dwBaseVal;        // 首重(单位：克) 首体积(单位：立方厘米) 首件数(单位：1) 
+		2 require unsigned int dwBasePr;         // 首费, 单位：分
+		3 require unsigned int dwContVal;        // 续重 续体积 续件数
+		4 require unsigned int dwContPr;         // 续费
+	};
+	struct STPostageConf
+	{
+		1 optional vector<unsigned int> vecAreaId;         // 区域,为空表示默认
+		2 optional unsigned int dwPostage;                 // 固定运费 
+		3 optional STPostage stPostage;                    // 根据重量or体积or件数计费
+	};
+	struct STPostageInfo
+	{
+		1 require long ddwPostageId;                            // 运费模板ID,1000001起
+		2 optional string strPostageName;                       // 运费模板名
+		3 require STSellerInfo stSellerInfo;                    // 商家信息
+		4 require string strAddr;                               // 发货地址
+		5 require string strPhone;                              // 手机号(回寄地址)
+		6 require bool bMian;                                   // 是否免邮
+		7 require bool bBao;                                    // 是否包邮
+		8 require int iCalcType;                                // 计费类型，取自emPostageCalcType的值
+		9 optional vector<STBaoPostageConf> vecBaoPostageConf;  // 包邮配置
+		10 optional vector<STPostageConf> vecPostageConf;       // 邮费配置
+		11 optional string strRemark;                           // 备注
+	};
+
+	// 管理台读运费列表
+	struct STMgtReadPostageListReq
+	{
+		1 require int iReqNum;
+		2 require int iCurPage;         // 仅支持页码翻页
+		3 optional int iGetAll;
+	};
+	struct STMgtReadPostageListRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<STPostageInfo> vecPostageInfo;
+		4 optional int iTotNum;
+	};
+
+	// 管理台读运费详情
+	struct STMgtReadPostageInfoReq
+	{
+		1 require long ddwPostageId;
+	};
+	struct STMgtReadPostageInfoRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional STPostageInfo stPostageInfo; 
+	};
+
+	// 管理台写运费
+	struct STMgtWritePostageReq
+	{
+		1 require int iType;           // =1:新增 =2:修改 =3:删除 
+		2 require STPostageInfo stPostageInfo;
+		3 optional int iModType;           // =0:默认，全都修改 =1：修改基本信息 =2：修改包邮策略 =3：修改运费策略
+	};
+    struct STMgtWritePostageRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional long ddwPostageId;             // 新增时返回 
+	};
+
+	// C端读
+	struct STPostageArea
+	{
+		1 require long ddwPostageId;               // 运费ID
+		2 optional unsigned int dwAreaId;           // 地区ID
+	};
+	struct STUserReadInfo
+	{
+		1 require bool bMian;                                                // 是否免邮，=0时以下有效
+		2 optional bool bBao;                                                // 是否包邮，=1时4有效
+		3 optional int iCalcType;                                            // 计费方式，取自emPostageCalcType
+		4 optional map<unsigned int, STBaoPostageConf> mapBaoPostageConf;    // 包邮配置
+		5 optional map<unsigned int, STPostageConf> mapPostageConf;          // 计费配置
+		6 require string strPostageName;
+	};
+	struct STUserReadPostageReq
+	{
+		1 require vector<STPostageArea> vecPostageArea;
+	};
+	struct STUserReadPostageRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional map<long, STUserReadInfo> mapId2Info;        // 运费ID - 信息 
+	};
+};

@@ -1,0 +1,111 @@
+#include "VideoMallPayCommon.jce"
+
+/**
+ * L5
+ * test：599873:3080192
+ * online: 897537:196608
+ */
+module VideoMall
+{
+	enum emValuationCmd
+	{
+		EM_VALUATION_CMD_QUERY_SKU_PRICE = 0xf40d,			//查询单个sku价格
+		EM_VALUATION_CMD_QUERY_RECOMMEND_PRICE = 0xf36b,	//查询推荐支付价格
+		EM_VALUATION_CMD_QUERY_PLACE_ORDER_PRICE = 0xf36c, 	//查询下单价格
+		EM_VALUATION_CMD_QUERY_REFUND_PRICE = 0xf62d,		//查询退款价格
+	};
+
+	enum emValuationRetCode
+	{
+		EM_VALUATION_RETCODE_OK = 0,
+		EM_VALUATION_RETCODE_VCOIN_NOT_ENOUGH = 2012, //V币余额不足
+		EM_VALUATION_RETCODE_VCOIN_LOCK_NOT_ENOUGH = 2015, //V币冻结导致余额不足
+	};
+
+	//计算购买商品价格
+	struct STQueryPayPriceReq
+	{
+		1 require vector<STGoodsInfo> vecGoodsInfo;		//购买的商品信息
+		2 optional unsigned int uiPayVCoin;				//支付的V币
+		3 optional STPerferential stPerferential;		//使用的优惠
+		4 optional unsigned int dwPostAreaId;			//邮寄地址ID
+	};
+
+	struct STQueryPayPriceRsp
+	{
+		1 require int iErrCode;
+		2 require string strErrMsg;
+		3 require STPayPriceInfo stPayPriceInfo;
+		4 require vector<STExpressOrderPriceInfo> vecExpressOrderPriceInfo;
+		5 optional STUserPayProp stUserPayProp;				//用户的支付属性
+		6 optional vector<STPerferential> vecAllPreferentail;	//支持的所有优惠方式
+		7 optional  vector<STPerferential> vecResultPreferentail;	//计价使用的优惠方式
+	};
+ 	
+ 	//配置的SKU价格信息
+	struct STSkuConfPriceInfo
+	{
+		1 require unsigned int uiVCoinPrice;   				//V币价格
+		2 require unsigned int uiVCoinDiscount;				//V币抵扣价格
+		3 require unsigned int uiOriPrice;					//原价
+		4 require unsigned int uiCashPrice;					//现金价格
+		5 require vector<STDiscountInfo> vecDiscountInfo;	//特权抵扣信息
+		6 optional vector<STActDiscountInfo> vecActDiscountInfo;		//活动抵扣信息
+		7 optional unsigned int uiPreSaleDiscount;			//预售优惠抵扣
+	};
+
+	struct STSkuSrcPriceInfo
+	{
+		1 require string strSkuId;
+		2 require STSkuConfPriceInfo stSkuConfPrice;		//商家配置的sku价格
+	};
+
+	struct STSkuResultPriceInfo
+	{
+		1 require unsigned int uiRealCashPrice;				//最终购买价格
+		2 require vector<STPrivilegeInfo> vecDisPrivilege;	//用于抵扣的特权
+		3 require vector<STPrivilegeInfo> vecAllPrivilege;	//所有特权的列表
+		//4 optional vector<STActDiscountInfo> vecRetActDiscountInfo;	//计算后的活动抵扣信息
+		4 optional vector<STPriceTag> vecRealPriceTag;		//最终购买价格标签
+		5 optional unsigned int uiExpectPrice;				//期望价格
+		6 optional vector<STPriceTag> vecExpectPriceTag;	//期望价格标签
+		7 optional unsigned int uiSpreadPrice;				//推广价格
+		8 optional vector<STPriceTag> vecSpreadPriceTag;	//推广价格标签
+	};
+
+	//查询商品购买价格
+	struct STQuerySkuPriceReq
+	{
+		1 require vector<STSkuSrcPriceInfo> vecSkuSrcPriceInfo;
+	};
+
+	struct STQuerySkuPriceRsp
+	{
+		1 require int iErrCode;
+		2 require string strErrMsg;
+		3 require map<string,STSkuResultPriceInfo> mapSku2RetPriceInfo;	//skuid映射价格信息
+	};
+
+	//查询退款金额
+	struct STQueryRefundPriceReq
+	{
+		1 require string strExpressOrderId;
+		2 require string strRefundOrder; 
+		3 optional unsigned int uiRefundSkuNum;
+	};
+
+	struct STRefundPriceInfo
+	{
+		1 require unsigned int uiRealRefundPrice;	//退还总金额
+		2 require unsigned int uiSKUPrice;			//退还商品金额
+		3 require unsigned int uiTransPrice;		//退还的运费
+		4 require unsigned int uiRefundVCoin;       //退还V币数
+	};
+	
+	struct STQueryRefundPriceRsp
+	{
+		1 require int iErrCode;
+		2 require string strErrMsg;
+		3 optional STRefundPriceInfo stRefundPriceInfo; 
+	};
+};

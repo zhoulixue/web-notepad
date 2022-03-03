@@ -1,0 +1,116 @@
+/*
+    测试环境：10.49.107.200:20055
+              913345:196609	
+	正式环境：10.223.13.76:20055
+	          913345:262144
+*/
+module FreqControl
+{
+	// 业务配置
+    // 业务维度配置
+	// 业务维度黑白名单
+	// 时间区间配置均手动操作DB
+	// 支持通过接口配置业务访问限制
+
+	enum emFreqControlCmd
+	{
+		EM_CHECK_LIMIT_REQ = 0xf455,           // 检查访问是否超限制
+		EM_WRITE_LIMIT_REQ = 0xf456,           // 写访问记录
+		EM_ADD_LIMIT_CONF_REQ = 0xf926,        // 新增访问限制规则
+	};
+
+	enum emErrCode
+	{
+		RT_APPID_INVALID_ERROR = 2001,         // APPID不合法
+		RT_GET_TASK_CONFIG_ERROR = 2002,       // 读统一配置失败
+		RT_READ_REDIS_ERROR = 2003,            // 读Redis失败
+		RT_WRITE_REDIS_ERROR = 2004,           // 写Redis失败
+		RT_SPLIT_STRING_ERROR = 2005,          // 拆解Redis Key失败
+		RT_GET_APPINFO_ERROR = 2006,           // 获取业务信息失败
+		RT_GET_APPDIMEN_ERROR = 2007,          // 获取业务维度失败
+		RT_GET_VALIDPRRIOD_ERROR = 2008,       // 获取有效时间段失败
+		RT_GET_BLACKANDWHITE_ERROR = 2009,     // 获取业务黑白名单失败
+		RT_GET_APPLIMIT_ERROR = 2010,          // 获取业务限制规则失败
+	};
+
+	enum emRetCode
+	{
+		RT_BLACK_LIST_KEY = 3001,           // 黑名单成员
+		RT_EXCEED_FREQ_LIMIT = 3002,        // 超过限制
+	};
+
+	struct STDimenInfo
+	{
+		1 require unsigned int uiDimenId;     // 维度ID, 业务方自定义
+		2 require string strDimenKey;         // 维度Key，业务方自定义，注意不可含"_"
+		3 optional long ulCount;              // 访问计数
+	};
+
+	struct STLimitConf
+	{
+		1 require int iAppId;               // 业务ID
+		2 require unsigned int uiDimenId;   // 维度ID
+		3 require int iPeriodId;            // 时间区间ID
+		4 require int iLimitNum;            // 限制数
+	};
+
+    struct STRetInfo
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 optional vector<int> vecPeriodId;      // 超出频率限制的时间区间集
+		4 optional map<int, long> mapPdId2Cnt;   // 时间区间ID-访问数
+	};
+
+    struct STCheckLimitReq
+	{
+		1 require int iAppId;                               // 业务ID
+		2 require string strAppKey;                         // 业务Key
+		3 require vector<STDimenInfo> vecDimenInfo;         // 验证的维度信息,暂不支持验证vector里面相同维度的多个Key
+		4 optional bool bWrt = false;                       // =0:只读 =1:读写
+	};
+
+	struct STCheckLimitRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+		3 require map<unsigned int, STRetInfo> mapRetInfo;                  // 维度ID-错误详情
+		4 optional map<unsigned int, map<string, STRetInfo> > mapDimId2Key2Ret;
+	};
+
+	struct STWriteLimitReq
+	{
+		1 require int iAppId;                           // 业务ID
+		2 require string strAppKey;                     // 业务Key
+		3 require vector<STDimenInfo> vecDimenInfo;     // 写入的维度信息
+		4 optional bool bAddSub = false;                // =0:加 =1:减
+	};
+
+	struct STWriteLimitRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+	};
+
+	enum emAddLimitType
+	{
+		ALT_OVERWRITE = 1,        // 覆盖
+		ALT_APPEND = 2,           // 追加
+		ALT_DELETE = 3,           // 删除
+		ALT_UPDATE = 4,           // 修改
+	};
+
+	struct STAddLimitConfReq
+	{
+		1 require int iAppId;
+		2 require string strAppKey;
+		3 require vector<STLimitConf> vecLimitConf;     // 批量写访问限制 
+		4 require int iAddType;                         // 写类型，取自emAddLimitType 
+	};
+
+	struct STAddLimitConfRsp
+	{
+		1 require int iErrCode;
+		2 optional string strErrMsg;
+	};
+};

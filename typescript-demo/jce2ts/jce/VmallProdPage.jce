@@ -1,0 +1,78 @@
+#include "store_comment.jce"
+#include "VMallRead.jce"
+#include "VmallCatMgr.jce"
+#include "VmallActivity.jce"
+#include "VideoMallCoupon.jce"
+
+
+//以下为C端使用协议，商品读模块
+module VmallProdPage
+{
+	enum emVMallReadCmd
+	{
+		EM_GET_PROD_PAGE = 0xfc03,
+		EM_GET_DRAFT_PAGE = 0xfdbe,			//读草稿页数据，协议一样，命令字不一样
+	};
+	
+	//商详页评论数据
+	struct STProdCommentInfo
+	{
+		3 optional vector<CStoreCommentPro::STMsgInfo> vecMsgInfo;				//主贴列表
+		4 optional map<long, CStoreCommentPro::STUserInfo> mapUserInfo;			//涉及到的用户详情
+		5 optional map<long,vector<CStoreCommentPro::STMsgInfo> > mapMsgInfo;		//商家回复评论列表
+        9 optional CStoreCommentPro::STProductCmtInfo stCmtInfo;                  //商品评论计数信息
+	};
+	
+	
+	//商品预约状态信息
+	struct STProdReserveInfo
+	{
+		1 optional bool bReserve = false;		//默认未预约
+		2 optional int iDepositPay = 0;			//定金支付次数
+	};
+	
+	//商品优惠券信息
+	struct STProdCouponInfo
+	{
+		1 optional vector<CVideoMallCoupon::STCouponBatchInfo> vecCoupon;  //商品参与的优惠券
+		2 optional map<string, int> mapStatus;             				   //是否可领取: 0 可以领取    1 不可领取
+	};
+	
+	struct STProdPageInfo
+	{
+		1 optional VMallRead::STProductInfo stProd;
+		3 optional vector<VmallCatMgr::STSecIpData> vecIp;		//商品所属IP数据
+		4 optional vector<VmallActivity::STActInfo> vecAct;		//商品参与的活动列表
+		5 optional STProdCouponInfo stCoupon;
+		6 optional vector<VMallRead::STProductBaseInfo> vecIpProd;		   //同一个IP的其它商品
+		7 optional STProdCommentInfo stComment;								//商品的评论信息
+		8 optional STProdReserveInfo stReserve;
+		20 optional int iCacheTime;								//缓存时间，前端不关心
+	};
+	
+	struct STGetProdPageReq
+	{
+		1 optional string strProdId;			
+		2 optional string strActId;
+		3 optional string strChannelId;
+	};
+	
+	struct STGetProdPageRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional STProdPageInfo stPage;
+	};
+	
+	struct STGetDraftPageReq
+	{
+		1 optional string strDraftId;
+	};
+	struct STGetDraftPageRsp
+	{
+		1 optional int iErrCode;
+		2 optional string strErrMsg;
+		3 optional STProdPageInfo stPage;
+	};
+
+};

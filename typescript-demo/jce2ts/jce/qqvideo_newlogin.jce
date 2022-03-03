@@ -1,0 +1,327 @@
+/*
+   登录相关协议，cwyuan
+ */
+
+module jce
+{
+	enum LoginErrCode
+	{
+		SUCC = 0,
+		FAIL = 1,                       	// 通用错误
+		ERR_REQ_PACKAGE=1001,				// 入包错误
+		ERR_TIMEOUT_WXPROXY=1002,			// WXProxy响应超时
+		ERR_INVALID_WXTOKEN=1003,			// 无效TOKEN
+		ERR_CREATE_VUSER=1004,				// 创建用户失败
+		ERR_UPDATE_ID=1005,					// 更新帐号失败
+		ERR_UPDATE_PROFILE=1006,			// 更新帐号资料失败
+		ERR_OVERLOAD=1007,					// overload
+		ERR_SNS_UPDATE=1008,				// 更新关系链失败
+		ERR_TIMEOUT_M2UREAD=1009,			// M2U读响应超时
+		ERR_WXPROXY=1010,					// WXPorxy错误(非超时错误)
+		ERR_M2UREAD=1011,					// OPENID反查错误(非超时错误)
+		ERR_WRITE_UIN=1012,					// 写入新用户错误
+		ERR_GET_VIDEOTOKEN=1013,			// 更新内部票据错误(非超时错误)
+		ERR_GET_VIDEOTOKEN_TIMEOUT=1014,	// 更新内部票据超时
+		ERR_CHECK_VIDEOTOKEN=1015,			// CHECK VIDEOTOKEN ERROR
+		ERR_CHECK_VIDEOTOKEN_TIMEOUT=1016,	// CHECK VIDEOTOKEN TIMEOUT
+		ERR_GET_WXQQ=1017,					// WX QQ RESP ERROR
+		ERR_READ_PROFILE_TIMEOUT=1018,		// 读取用户资料超时
+		ERR_READ_PROFILE=1019,				// 读取用户资料失败(非超时)
+		ERR_CHECK_PTLOGIN=1020,				// CHECK PTLOGIN ERROR
+		ERR_CHECK_PTLOGIN_TIMEOUT=1021,		// CHECK PTLOGIN TIMEOUT
+		ERR_READ_QQ_PROFILE = 1022,			//读qq资料失败
+	};
+	
+	enum ModuleCmd
+	{
+		CMD_LOGIN = 0xea52,
+		CMD_LOGOUT = 0xea54,
+		CMD_REFRESH = 0xea53,
+		CMD_WRITEINFO = 0xec3b,
+		CMD_WRITEFIELD = 0xf5f7,
+	};
+	
+	enum DevicePlatType
+	{
+		DEV_PLAT_IPAD=5,
+		DEV_PLAT_APAD=6,
+		DEV_PLAT_IPHONE=7,
+		DEV_PLAT_APHONE=8
+	};
+	
+	enum LoginType
+	{
+		E_WX_LOGIN = 0,
+		E_QQ_LOGIN = 1,
+		E_QQ_LOGOUT = 2,
+		E_QQ_BIND = 3,		//废弃
+		E_QQ_UNBIND = 4,	//废弃
+		E_WX_LOGOUT = 5,
+		E_WX_REFRESH = 6,
+		E_QQ_REFRESH = 7,
+		E_WX_UNBIND = 8,	//废弃
+		E_WX_BIND = 9,		//废弃
+		E_TV_LOGIN = 10,
+		
+	};
+	
+	struct STDevInfo 
+	{
+		1	require unsigned short wDevPlatType;	// 设备类型
+		2	optional string pushToken;				// push token
+		3	optional string guid;					// guid
+		4	optional string devid;					// devid
+		5	optional string strFromInfo;			// 包头里的frominfo，格式：平台号_appversion_appver,最后一个是app的版本号
+	};
+	
+	// 绑定的单个设备信息
+	struct STBindDevInfo
+	{
+	1	require long ddwBindTime;
+	2	require STDevInfo stDevInfo;
+	};
+	
+	// 资料中存储设备信息的FIELDVALUE
+	struct STBindDevInfoArr
+	{
+	1	require vector<STBindDevInfo> devInfos;
+	};
+	
+	/*
+		票据的定义：
+		TokenKeyType = 1，qq强登录态
+		TokenKeyType = 7，qq弱登录态
+		TokenKeyType = 8，vaskey登录态
+		TokenKeyType = 9，视频内部票据
+		TokenKeyType = 100，微信票据
+		TokenKeyType = 101，微信code
+		TokenKeyType = 102，tv票据
+		TokenKeyType = 103，vplus票据
+		TokenKeyType = 104，telphone票据
+	*/
+	
+	//当前进行切换的登录态；
+	struct CurLoginToken 
+	{
+		0	require	string			TokenAppID;			//微信的appid
+		1	require	byte			TokenKeyType;		//1 skey,7 lsky,9 vuserkey,100 accessToken,101 wx code
+		2	require vector<byte>	TokenValue;			//TokenKeyType对应的值
+		3	optional long			TokenUin;			//QQ登录时的uin
+		4	optional string 		TokenID;    		//微信登录账号信息，如openid
+		5	optional bool 			bMainLogin = false;	//app端的主登录态表示，true：表示为主登录态。false:表示为从登录态，只有多个账号登录的时候才需要
+		100 optional string			TokenValueString; 	//tokenValue String
+	};
+
+	//内部的票据
+	struct STInnerToken 
+	{
+		1	require long ddwVuser;			//内部登录态ID
+		2	require string vsessionKey;		//内部登录态串
+		3	optional unsigned int dwExpireTime;		//票据过期时间，单位秒
+	};
+	
+	//wx 用户票据相关信息
+	struct WXUserTokenInfo
+	{
+		0 optional string wxNickName;					//微信昵称
+		1 optional string wxFaceImageUrl;				//微信头像
+		2 optional string wxOpenId;						//微信openId，
+		3 optional string accessToken;					//登录态串
+		4 optional string refreshToken;					//登录态refresh串
+		5 optional unsigned int accessTokenExpireTime;	//accesstoken过期时间，单位(秒)
+	};
+	
+	//qq相关信息
+	struct QQUserTokenInfo
+	{
+		0 optional string qqNickName;
+		1 optional string qqFaceImageUrl;
+		2 optional string qqUin;
+	};
+
+	//获取GUID, 
+	struct StGuidGetRequest
+	{
+		0	require int iMarketid; 					//填写1表示QQlive
+		1	require int iPlatform; 					//2:表示APHONE,3:表示ipad,4:表示iphone
+		2	optional unsigned int nUnixtime; 		//终端Unix时间戳
+	};
+
+	struct StGuidGetResponse
+	{
+		0   require int errCode;          		// 返回结果值 0-成功 非0-失败
+		1   require string strErrMsg;     		// 错误描述
+		2	require string strGuid;       		// 返回的guid
+		3	require unsigned int nUnixtime; 	// 返回当前服务器的unixTime
+	};
+	
+	
+	// 刷新票据请求。如果返回 102 需要用户重新登录
+	struct NewRefreshTokenRequest
+	{
+		1 optional STDevInfo stDevInfo;					//设备信息	
+		2 optional vector<CurLoginToken> vecLoginToken;	//这里只传递需要刷新的票据信息
+		3 optional int refreshTypeMask;					// 1 标示刷新 wx 的accessToken
+	};
+
+	// 登刷新票据返回
+	struct NewRefreshTokenResponse
+	{
+		1 require unsigned int errCode;					//错误码
+		2 require string strErrMsg;						//返回信息
+		3 optional WXUserTokenInfo wxUserTokenInfo;		//wx的用户信息，包括accessToken 和有效期
+		4 optional QQUserTokenInfo qqUserTokenInfo;		//QQ用户信息
+		5 optional STInnerToken innerToken;				//内部票据
+	};
+	
+	//登录请求协议
+	struct NewLoginRequest
+	{
+		0 optional vector<CurLoginToken> curLoginTokenList;		//当前登录的登录态，QQ会有多个票据，wx 只有一个
+		1 optional int from;									//来源，1=个人中心页卡；2：点击添加好友关系链触发登录；3：表示好莱坞；4：分享登录；
+		2 optional STDevInfo stDevInfo;
+	};
+
+	//登录返回协议
+	struct NewLoginResponse
+	{
+		0 require int errCode;							//错误码
+		1 require STInnerToken innerToken;				//内部票据
+		2 optional WXUserTokenInfo wxUserTokenInfo;		//wx用户信息，如果是wx登录，则需要返回这个结构
+		3 optional QQUserTokenInfo qqUserTokenInfo;		//QQ用户信息
+		4 optional string strErrMsg;					//出错原因
+		6 optional bool bNewUser = false;				//新用户标识，true:新用户；false:老用户
+	};
+	
+	// 登出请求，在登出时需要调用
+	struct NewLogoutRequest
+	{
+		0 require int majorLoginType;		//主要登录态定义 1 表示 wx ，2 表示 手Q
+		1 optional STDevInfo stDevInfo;
+		2 optional vector<CurLoginToken> vecLoginToken;
+	};
+	
+	// 登出返回
+	struct NewLogoutResponse
+	{
+		0 require int errCode;				//错误码
+		1 optional string strErrMsg;		//错误原因
+	};
+	
+	struct STTypeInfo
+	{
+		0 require unsigned byte cTypeid;	//用户身份id，取值范围：1，明星，对应底层0x01；2，明日之子，对应底层0x02；
+		1 require unsigned byte cValue;		//0：取消身份id；1：设置身份id
+	};
+	
+	struct STStatusInfo
+	{
+		0 require unsigned byte cStatusId;	//用户状态id，取值范围
+		1 require unsigned byte cValue;		//0：取消状态；1：设置状态
+	};
+	
+	enum E_FIELD_ID
+	{
+		E_COMM_USER_NICK = 1,		//用户通用昵称
+		E_COMM_USER_HEAD = 2,		//用户通用头像
+		E_AUTO_USER_NICK = 3,		//用户上传昵称
+		E_AUTO_USER_HEAD = 4,		//用户上传头像
+		E_USER_TYPE = 5,			//用户身份标识
+		E_USER_PHONE = 6,			//用户手机
+		E_USER_IDENTIFY = 7,		//用户身份证号码
+		E_USER_STATUS = 8,			//用户状态标识
+		E_USER_DESC = 9,			//用户签名简介
+	};
+	
+	struct STFieldInfo
+	{
+		0 require unsigned int dwFieldId;
+		1 optional unsigned int dwValue;
+		2 optional string strValue;
+		3 optional STTypeInfo stTypeInfo;
+		4 optional STStatusInfo stStatusInfo;
+	};
+	
+	struct WriteInfoRequest
+	{
+		0 require string strNick;
+		1 require string strHead;
+		2 optional unsigned byte cUserType=0;		//用户类型，0：普通用户；1： 明星用户
+		3 optional unsigned byte cOperType=0;		//操作类型，0：修改通用资料；1：修改用户上传资料;
+		4 optional string strIntroduct;				//签名简介
+		5 optional vector<STTypeInfo> vecTypeInfo;	//用户身份信息
+	};
+	
+	struct WriteInfoResponse
+	{
+		0 require int errCode;			//错误码
+		1 optional string strErrMsg;		//错误原因
+	};
+	
+	struct WriteFieldRequest
+	{
+		1 require vector<STFieldInfo> vecFieldInfo;
+	};
+	
+	struct WriteFieldResponse
+	{
+		0 require int errCode;			//错误码
+		1 optional string strErrMsg;		//错误原因
+	};
+	
+	//微信的票据
+	struct STWxLoginToken 
+	{
+		1	optional string	appID;					//登录态APPID
+		2	require	unsigned short	wTokenType;		//登录态类型，填写100
+		3	require string openId;					//登录态ID
+		4	require string accessToken;				//登录态串
+		5	optional string refreshToken;			//登录态refresh串
+		6	optional long lUserid;					//openid对应的userid
+		7 	optional string strCode;				//code
+	};
+	
+	//ptlogin的票据
+	struct STPtloginToken
+	{
+	1	require unsigned int ddwUin;
+	2	require string strAppid;
+	3	require string strSkey;
+	4	require unsigned int dwKeyType;			//登录态类型
+	5	optional unsigned int dwAppid;			//与strAppid对应
+	6	optional long lUserid;					//qq对应的userid
+	};
+	
+	// 用户登录发中转消息
+	struct STLoginToInnerRelay
+	{
+	1	require STWxLoginToken	loginToken;		//微信票据
+	2	require STInnerToken	innerToken;		//内部票据
+	3	optional bool bNewUser = false;			//是否新用户首次登录
+	4	optional string strCallScene;			//调用场景，透传app提供的字符串
+	5	optional unsigned byte cLoginType = 0;	//0，wx登录；1、qq登录；2、qq登出；3、qq绑定；4、qq解绑；5、wx登出；6、wx刷票据；7、qq刷票据；8、wx解绑；9、wx绑定
+	6	optional STDevInfo devInfo;				//设备信息
+	7	optional STPtloginToken stPtloginToken;	//qq票据
+	8	optional string strNickName;			//用户昵称
+	9	optional unsigned byte cFromType = 0;	//0，表示老登录模块过来的请求；1，表示新登录模块过来的请求
+	//cFromType = 0，包含cLoginType有：0、1、2、3、4、6
+	//cFromType = 1，包含cLoginType有：0、1、2、4、5、6、7、8
+	10	optional string strSex;					//用户性别 
+	};
+	
+	
+	//获取微信二维码ticket请求
+	struct NewGetTicketRequest
+	{
+		0 require string		wxAppID;	//微信AppId
+	};
+
+	//获取微信二维码ticket返回
+	struct NewGetTicketResponse
+	{
+		0 require int errCode;				//错误码
+		1 optional string strErrMsg;		//错误原因
+		2 optional string	ticket;
+		3 optional unsigned int ticketExpireTime;	//ticket过期时间，单位(秒)
+	};
+};
