@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <div id="app"></div>
+</head>
+<body>
+  
+</body>
+<script>
+  function handler() { console.log('click') }
+  const vnode = {
+    tag: 'div',
+    props: {
+      onClick: handler,
+    },
+    children: 'click me'
+  }
+
+  function renderer(vnode, container) {
+    if (typeof vnode.tag === 'string') {
+      mountElement(vnode, container)
+    } else if (typeof node.tag === 'object') {
+      mountComponent(vnode, container)
+    }
+  }
+
+  renderer(vnode, document.getElementById('app'))
+  // 标签
+  function mountElement(vnode, container) {
+    const el = document.createElement(vnode.tag)
+    Object.keys(vnode.props).forEach(key => {
+      const prop = vnode.props[key];
+      if (key.startsWith('on')) {
+        el.addEventListener(key.slice(2).toLocaleLowerCase(), prop)
+      }
+    })
+    if (typeof vnode.children === 'string') {
+      el.appendChild(document.createTextNode(vnode.children))
+    } else if (Array.isArray(vnode.children)) {
+      vnode.children.forEach(v => renderer(v, el))
+    }
+    container.appendChild(el)
+  }
+  // 组件
+  function mountComponent(vnode, container) {
+    const subtree = vnode.tag.render()
+    renderer(subtree, container)
+  }
+
+  const myComponent = {
+    render() {
+      return vnode
+    }
+  }
+</script>
+</html>
