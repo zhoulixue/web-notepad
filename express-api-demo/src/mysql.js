@@ -7,9 +7,4 @@ const db = mysql.createPool({
   database: 'my_test_db'
 })
 
-db.query('select * from users', (err, results) => {
-  console.log(11, err.message)
-  console.log(results)
-})
-
 module.exports = db
