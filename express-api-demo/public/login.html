@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="https://code.jquery.com/jquery-3.6.1.min.js"></script>
+</head>
+<body>
+  <form id="form" onsubmit="return false" action="##" method="post">
+    <label for="username">用户名</label><br>
+    <input type="text" name="username"><br>
+    <label for="password">密码</label><br>
+    <input type="crrent-password" name="password"><br>
+    <input type="button" value="登录" onclick="login()">
+  </form>
+</body>
+<script>
+  function login() {
+    $.ajax({
+      type: 'POST',
+      dataType: 'json',
+      url: '/api/login',
+      data: $('#form').serialize(),
+      success: (result) => {
+        console.log(result)
+        alert('已登录')
+        window.location.href = '/index.html'
+      },
+      error: () => {
+        console.log('异常')
+      }
+    })
+  }
+</script>
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="https://code.jquery.com/jquery-3.6.1.min.js"></script>
+</head>
+<body>
+  <h1>首页</h1>
+  <button id="logout">登出</button>
+</body>
+<script>
+  function getUserName () {
+    $.ajax({
+      type: 'GET',
+      url: '/api/getUsername',
+      success: (result) => {
+        console.log(result)
+        if (result.status === 1) {
+          alert('未登录，跳转登录页')
+          window.location.href = '/login.html'
+        }
+      },
+      error: () => {
+        console.log('获取身份异常')
+      }
+    })
+  }
+  getUserName()
+
+  $('#logout').click(() => {
+    $.ajax({
+      type: 'POST',
+      dataType: 'json',
+      url: '/api/logout',
+      data: "{}",
+      success: (result) => {
+        console.log(result)
+        alert('已登出')
+        window.location.reload()
+      },
+      error: () => {
+        console.log('异常')
+      }
+    })
+  })
+</script>
+</html>
