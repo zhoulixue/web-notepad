@@ -12,3 +12,9 @@ app.get('/', (req, res, next) => {
     }
   })
 })
+// promise
+app.get('/', (req, res, next) => {
+  Promise.resolve().then(() => {
+    throw new Error('BROKEN')
+  }).catch(next) // Errors will be passed to Express.
+})
