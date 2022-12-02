@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <div style="height: 500px;">
+    <div class="box">
+      display:inline-block居中要靠父元素，而width:fit-content直接margin:auto.
+    </div>
+  </div>
+</body>
+<style>
+  .box {
+    /* display: inline-block; */
+    margin: auto;
+    width: -webkit-fit-content;
+    width: -moz-fit-content;
+    width: fit-content;
+  }
+</style>
+
+</html>
