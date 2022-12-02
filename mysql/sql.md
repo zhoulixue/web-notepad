@@ -15,3 +15,16 @@ SELECT * from table_name ORDER BY field1 ASC, field2 DESC
 
 SELECT COUNT(*) as num FROM table_name;
 ```
+
+```sql
+// 创建数据库
+CREATE DATABASE dbname
+// 删除数据库
+DROP DATABASE dbname
+// 选择数据库
+USE dbname
+// 创建数据表
+CREATE TABLE tablename (column_name column_type)
+// 删除数据表
+DROP TABLE tablename
+```
