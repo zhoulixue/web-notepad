@@ -1,5 +1,5 @@
 {
-  "name": "nodejs-demo2",
+  "name": "selenium-demo",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "css-spring": "^4.1.0"
+    "mocha": "^10.2.0",
+    "selenium-webdriver": "^4.8.1"
   }
 }
