@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <img src="./images/x.jpg" alt="">
+</body>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      // 所以Service Worker只是一个挂在navigator对象上的HTML5 API而已
+      navigator.serviceWorker.register('./scripts/sw.js').then(function (registration) {
+        console.log('我注册成功了666', registration);
+      }, function (err) {
+        console.log('我注册失败了', err);
+      });
+    });
+  }
+
+</script>
+
+</html>

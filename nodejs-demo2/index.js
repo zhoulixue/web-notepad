@@ -2,8 +2,8 @@
 const spring = require('css-spring').default
 const { toString } = require('css-spring')
 const keyframes = spring(
-  { scale: 0, opacity: 1 }, // from
-  { scale: 1, opacity: 1 }, // to
+  { scale: 0 }, // from
+  { scale: 1 }, // to
   // precision表示精度有2位
   { damping: 20.17, stiffness: 381.47, precision: 4 }
 );
