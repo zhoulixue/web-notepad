@@ -1,0 +1,26 @@
+{
+  "name": "public",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "esbuild": "esbuild --outfile=sw.js --bundle sw.ts",
+    "inject": "workbox injectManifest workbox-config.js",
+    "build": "npm run esbuild && npm run inject",
+    "gen": "npx workbox-cli wizard --injectManifest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "esbuild": "^0.17.12",
+    "workbox-build": "^6.5.4",
+    "workbox-cli": "^6.5.4",
+    "workbox-precaching": "^6.5.4",
+    "workbox-recipes": "^6.5.4",
+    "workbox-routing": "^6.5.4",
+    "workbox-strategies": "^6.5.4",
+    "workbox-window": "^6.5.4"
+  }
+}

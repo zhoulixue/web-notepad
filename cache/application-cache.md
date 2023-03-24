@@ -2,7 +2,7 @@
 ⚠️ 注意：application-cache是已经被web标准废弃的功能     
 Application Cache 是 HTML5引入的应用程序缓存功能，可以实现离线浏览网站的功能。    
 ## HTML配置
-提供带有 cache manifest 的HTML文档，每个制定了manifest的页面在用户对其方位时都会被缓存
+提供带有 cache manifest 的HTML文档，每个制定了manifest的页面在用户对其访问时都会被缓存
 ```html
 <!DOCTYPE HTML>
 <html manifest="demo.appcache">
@@ -35,7 +35,7 @@ FALLBACK:
 
 ## 更新缓存
 以下情况会更新缓存：
-1. 用户晴空浏览器缓存
+1. 用户清空浏览器缓存
 2. manifest文件被修改 （更新注释中的日期和版本号，可以使浏览器重新缓存文件）
 3. 由程序来更新缓存
 
