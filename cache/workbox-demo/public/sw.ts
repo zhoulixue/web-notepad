@@ -1,6 +1,7 @@
 import { precacheAndRoute } from 'workbox-precaching'
 import { registerRoute, Route } from 'workbox-routing'
 import { NetworkFirst, CacheFirst, CacheOnly, NetworkOnly, StaleWhileRevalidate } from 'workbox-strategies'
+import { CacheableResponsePlugin } from 'workbox-cacheable-response'
 
 declare const self: ServiceWorkerGlobalScope
 
@@ -23,5 +24,20 @@ const postRoute = new Route(
   new NetworkFirst({ cacheName: 'post-api-response' }),
   'POST'
 )
+
+const imgRoute = new Route(
+  ({ request }) => {
+    return request.destination === 'image'
+  },
+  new CacheFirst({
+    cacheName: 'img-cache', plugins: [
+      new CacheableResponsePlugin({
+        statuses: [0, 200]
+      })
+    ]
+  })
+)
 registerRoute(apiRoute)
 registerRoute(postRoute)
+registerRoute(imgRoute)
+

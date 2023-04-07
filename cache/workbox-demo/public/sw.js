@@ -2160,6 +2160,65 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     }
   };
 
+  // node_modules/workbox-strategies/CacheFirst.js
+  var CacheFirst = class extends Strategy {
+    /**
+     * @private
+     * @param {Request|string} request A request to run this strategy for.
+     * @param {workbox-strategies.StrategyHandler} handler The event that
+     *     triggered the request.
+     * @return {Promise<Response>}
+     */
+    async _handle(request, handler) {
+      const logs = [];
+      if (true) {
+        finalAssertExports.isInstance(request, Request, {
+          moduleName: "workbox-strategies",
+          className: this.constructor.name,
+          funcName: "makeRequest",
+          paramName: "request"
+        });
+      }
+      let response = await handler.cacheMatch(request);
+      let error = void 0;
+      if (!response) {
+        if (true) {
+          logs.push(`No response found in the '${this.cacheName}' cache. Will respond with a network request.`);
+        }
+        try {
+          response = await handler.fetchAndCachePut(request);
+        } catch (err) {
+          if (err instanceof Error) {
+            error = err;
+          }
+        }
+        if (true) {
+          if (response) {
+            logs.push(`Got response from network.`);
+          } else {
+            logs.push(`Unable to get a response from the network.`);
+          }
+        }
+      } else {
+        if (true) {
+          logs.push(`Found a cached response in the '${this.cacheName}' cache.`);
+        }
+      }
+      if (true) {
+        logger.groupCollapsed(messages2.strategyStart(this.constructor.name, request));
+        for (const log of logs) {
+          logger.log(log);
+        }
+        messages2.printFinalResponse(response);
+        logger.groupEnd();
+      }
+      if (!response) {
+        throw new WorkboxError("no-response", { url: request.url, error });
+      }
+      return response;
+    }
+  };
+
   // node_modules/workbox-strategies/plugins/cacheOkAndOpaquePlugin.js
   var cacheOkAndOpaquePlugin = {
     /**
@@ -2339,8 +2398,139 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     }
   };
 
+  // node_modules/workbox-cacheable-response/_version.js
+  try {
+    self["workbox:cacheable-response:6.5.3"] && _();
+  } catch (e) {
+  }
+
+  // node_modules/workbox-cacheable-response/CacheableResponse.js
+  var CacheableResponse = class {
+    /**
+     * To construct a new CacheableResponse instance you must provide at least
+     * one of the `config` properties.
+     *
+     * If both `statuses` and `headers` are specified, then both conditions must
+     * be met for the `Response` to be considered cacheable.
+     *
+     * @param {Object} config
+     * @param {Array<number>} [config.statuses] One or more status codes that a
+     * `Response` can have and be considered cacheable.
+     * @param {Object<string,string>} [config.headers] A mapping of header names
+     * and expected values that a `Response` can have and be considered cacheable.
+     * If multiple headers are provided, only one needs to be present.
+     */
+    constructor(config = {}) {
+      if (true) {
+        if (!(config.statuses || config.headers)) {
+          throw new WorkboxError("statuses-or-headers-required", {
+            moduleName: "workbox-cacheable-response",
+            className: "CacheableResponse",
+            funcName: "constructor"
+          });
+        }
+        if (config.statuses) {
+          finalAssertExports.isArray(config.statuses, {
+            moduleName: "workbox-cacheable-response",
+            className: "CacheableResponse",
+            funcName: "constructor",
+            paramName: "config.statuses"
+          });
+        }
+        if (config.headers) {
+          finalAssertExports.isType(config.headers, "object", {
+            moduleName: "workbox-cacheable-response",
+            className: "CacheableResponse",
+            funcName: "constructor",
+            paramName: "config.headers"
+          });
+        }
+      }
+      this._statuses = config.statuses;
+      this._headers = config.headers;
+    }
+    /**
+     * Checks a response to see whether it's cacheable or not, based on this
+     * object's configuration.
+     *
+     * @param {Response} response The response whose cacheability is being
+     * checked.
+     * @return {boolean} `true` if the `Response` is cacheable, and `false`
+     * otherwise.
+     */
+    isResponseCacheable(response) {
+      if (true) {
+        finalAssertExports.isInstance(response, Response, {
+          moduleName: "workbox-cacheable-response",
+          className: "CacheableResponse",
+          funcName: "isResponseCacheable",
+          paramName: "response"
+        });
+      }
+      let cacheable = true;
+      if (this._statuses) {
+        cacheable = this._statuses.includes(response.status);
+      }
+      if (this._headers && cacheable) {
+        cacheable = Object.keys(this._headers).some((headerName) => {
+          return response.headers.get(headerName) === this._headers[headerName];
+        });
+      }
+      if (true) {
+        if (!cacheable) {
+          logger.groupCollapsed(`The request for '${getFriendlyURL(response.url)}' returned a response that does not meet the criteria for being cached.`);
+          logger.groupCollapsed(`View cacheability criteria here.`);
+          logger.log(`Cacheable statuses: ` + JSON.stringify(this._statuses));
+          logger.log(`Cacheable headers: ` + JSON.stringify(this._headers, null, 2));
+          logger.groupEnd();
+          const logFriendlyHeaders = {};
+          response.headers.forEach((value, key) => {
+            logFriendlyHeaders[key] = value;
+          });
+          logger.groupCollapsed(`View response status and headers here.`);
+          logger.log(`Response status: ${response.status}`);
+          logger.log(`Response headers: ` + JSON.stringify(logFriendlyHeaders, null, 2));
+          logger.groupEnd();
+          logger.groupCollapsed(`View full response details here.`);
+          logger.log(response.headers);
+          logger.log(response);
+          logger.groupEnd();
+          logger.groupEnd();
+        }
+      }
+      return cacheable;
+    }
+  };
+
+  // node_modules/workbox-cacheable-response/CacheableResponsePlugin.js
+  var CacheableResponsePlugin = class {
+    /**
+     * To construct a new CacheableResponsePlugin instance you must provide at
+     * least one of the `config` properties.
+     *
+     * If both `statuses` and `headers` are specified, then both conditions must
+     * be met for the `Response` to be considered cacheable.
+     *
+     * @param {Object} config
+     * @param {Array<number>} [config.statuses] One or more status codes that a
+     * `Response` can have and be considered cacheable.
+     * @param {Object<string,string>} [config.headers] A mapping of header names
+     * and expected values that a `Response` can have and be considered cacheable.
+     * If multiple headers are provided, only one needs to be present.
+     */
+    constructor(config) {
+      this.cacheWillUpdate = async ({ response }) => {
+        if (this._cacheableResponse.isResponseCacheable(response)) {
+          return response;
+        }
+        return null;
+      };
+      this._cacheableResponse = new CacheableResponse(config);
+    }
+  };
+
   // sw.ts
-  precacheAndRoute([{"revision":"2c6f004129bb1ca33154ed5f78f8deb5","url":"app.js"},{"revision":"3a748dff8a5cdfd11e7af6dd05c82d47","url":"index.html"},{"revision":"1a7bb8d57585fa8e52e46f59472e73e3","url":"style.css"},{"revision":"98d3e3e53f5e163e23f892a511d99c15","url":"workbox-config.js"}]);
+  precacheAndRoute([{"revision":"2c6f004129bb1ca33154ed5f78f8deb5","url":"app.js"},{"revision":"b76bf89f1dd3d4e9190b4aa060b339eb","url":"index.html"},{"revision":"1a7bb8d57585fa8e52e46f59472e73e3","url":"style.css"},{"revision":"98d3e3e53f5e163e23f892a511d99c15","url":"workbox-config.js"}]);
   var apiRoute = new Route(
     ({ url }) => {
       return url.origin === "http://localhost:4000";
@@ -2355,6 +2545,20 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     new NetworkFirst({ cacheName: "post-api-response" }),
     "POST"
   );
+  var imgRoute = new Route(
+    ({ request }) => {
+      return request.destination === "image";
+    },
+    new CacheFirst({
+      cacheName: "img-cache",
+      plugins: [
+        new CacheableResponsePlugin({
+          statuses: [0, 200]
+        })
+      ]
+    })
+  );
   registerRoute(apiRoute);
   registerRoute(postRoute);
+  registerRoute(imgRoute);
 })();

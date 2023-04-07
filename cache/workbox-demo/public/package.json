@@ -16,6 +16,7 @@
   "devDependencies": {
     "esbuild": "^0.17.12",
     "workbox-build": "^6.5.4",
+    "workbox-cacheable-response": "^6.5.4",
     "workbox-cli": "^6.5.4",
     "workbox-precaching": "^6.5.4",
     "workbox-recipes": "^6.5.4",
