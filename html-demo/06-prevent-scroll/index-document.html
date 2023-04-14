@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <button id="btn" onclick="btnClick()">弹窗</button>
+  <div id="popup">
+    <div class="mask" onclick="maskClick()"></div>
+    <div id="popup-content"></div>
+  </div>
+</body>
+
+<script>
+  for (let i = 0; i < 100; i++) {
+    const ele = document.createElement('div')
+    ele.textContent = i
+    document.body.append(ele)
+  }
+  const popupContent = document.getElementById('popup-content')
+  for (let i = 0; i < 100; i++) {
+    const ele = document.createElement('div')
+    ele.textContent = i
+    popupContent.append(ele)
+  }
+
+  function btnClick() {
+    const popup = document.getElementById('popup')
+    popup.style.display = 'block'
+    document.documentElement.style.overflowY = 'hidden'
+    document.body.style.overflowY = 'hidden'
+    console.log(document.documentElement)
+  }
+  function maskClick() {
+    const popup = document.getElementById('popup')
+    popup.style.display = 'none'
+    document.documentElement.style.overflowY = 'auto'
+    document.body.style.overflowY = 'auto'
+  }
+</script>
+
+<style>
+  #btn {
+    position: fixed;
+    bottom: 100px;
+    right: 100px;
+
+  }
+
+  #popup {
+    display: none;
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .mask {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.3);
+  }
+
+  #popup-content {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    height: 300px;
+    width: 300px;
+    background-color: rgba(255, 255, 255);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    /* height: 100vh; */
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+</style>
+
+</html>
