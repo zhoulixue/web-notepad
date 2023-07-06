@@ -1,19 +1,16 @@
-// 找到 i 到 n 最小值的位置，跟i交换
+// 0-i 是有序的，将 i + 1 插入 0-i,使之有序
 function sort(array) {
-  for (let i = 0; i < array.length; i++) {
-    let minIndex = i;
-    for (let j = i + 1; j < array.length; j++) {
-      if (array[j] < array[minIndex]) {
-        minIndex = j;
+  for (let i = 1; i < array.length; i++) {
+    for (let j = i - 1; j >=0; j--) {
+      if (array[j] > array[j + 1]) {
+        swap(array, j, j + 1)
+      } else {
+        break
       }
-    }
-    if (i !== minIndex) {
-      swap(array, i, minIndex)
     }
   }
   return array
 }
-
 
 function swap(array, i, j) {
   array[i] = array[i] ^ array[j]
